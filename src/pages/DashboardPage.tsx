@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { StatusStamp, STATUS_LABEL } from "../components/StatusStamp";
 import { CalendarWidget } from "../components/CalendarWidget";
 import { TodoWidget } from "../components/TodoWidget";
-import { PillarBadge, FunnelBadge, PILLAR_LABEL, FUNNEL_LABEL } from "../components/PillarFunnelBadge";
+import { PillarBadge, PILLAR_LABEL } from "../components/PillarFunnelBadge";
 
 const STAT_ACCENT: Record<ContentStatus, string> = {
   draft: "#8a8a8f",
@@ -27,7 +27,6 @@ export function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [platformFilter, setPlatformFilter] = useState<string>("");
   const [pillarFilter, setPillarFilter] = useState<string>("");
-  const [funnelFilter, setFunnelFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [isExporting, setIsExporting] = useState<"excel" | "pdf" | null>(null);
 
@@ -76,7 +75,6 @@ export function DashboardPage() {
         search: search || undefined,
         platform: platformFilter || undefined,
         pillar: pillarFilter || undefined,
-        funnel: funnelFilter || undefined,
       });
       setContents(data);
     } catch (err) {
@@ -89,7 +87,7 @@ export function DashboardPage() {
   useEffect(() => {
     loadContents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, platformFilter, pillarFilter, funnelFilter]);
+  }, [statusFilter, platformFilter, pillarFilter]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -188,19 +186,6 @@ export function DashboardPage() {
             </option>
           ))}
         </select>
-        <select
-          value={funnelFilter}
-          onChange={(e) => setFunnelFilter(e.target.value)}
-          className="select"
-          style={{ maxWidth: 140 }}
-        >
-          <option value="">Semua funnel</option>
-          {Object.entries(FUNNEL_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
         <button type="submit" className="btn">
           Cari
         </button>
@@ -223,7 +208,6 @@ export function DashboardPage() {
                 <th>Judul</th>
                 <th>Platform</th>
                 <th>Pillar</th>
-                <th>Funnel</th>
                 <th>Status</th>
                 <th>Penulis</th>
                 <th>Diperbarui</th>
@@ -236,9 +220,6 @@ export function DashboardPage() {
                   <td>{c.platform || "-"}</td>
                   <td>
                     <PillarBadge pillar={c.pillar} />
-                  </td>
-                  <td>
-                    <FunnelBadge funnel={c.funnel} />
                   </td>
                   <td>
                     <StatusStamp status={c.status} />

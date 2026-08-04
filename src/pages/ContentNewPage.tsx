@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, type ContentPillar, type ContentFunnel } from "../lib/api";
-import { PILLAR_LABEL, FUNNEL_LABEL } from "../components/PillarFunnelBadge";
+import { api, type ContentPillar } from "../lib/api";
+import { PILLAR_LABEL } from "../components/PillarFunnelBadge";
 import { PlatformPicker } from "../components/PlatformPicker";
 
 export function ContentNewPage() {
@@ -12,7 +12,6 @@ export function ContentNewPage() {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("");
   const [pillar, setPillar] = useState<ContentPillar | "">("");
-  const [funnel, setFunnel] = useState<ContentFunnel | "">("");
   const [bodyDraft, setBodyDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,7 +31,6 @@ export function ContentNewPage() {
         title: title.trim(),
         platform: platform || undefined,
         pillar: pillar || undefined,
-        funnel: funnel || undefined,
         bodyDraft: bodyDraft.trim() || undefined,
       });
 
@@ -100,21 +98,6 @@ export function ContentNewPage() {
             </select>
           </label>
 
-          <label className="field" style={{ marginBottom: 0, flex: 1, minWidth: 160 }}>
-            <span className="field__label">Funnel (opsional)</span>
-            <select
-              value={funnel}
-              onChange={(e) => setFunnel(e.target.value as ContentFunnel | "")}
-              className="select"
-            >
-              <option value="">- Pilih funnel -</option>
-              {Object.entries(FUNNEL_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <label className="field">

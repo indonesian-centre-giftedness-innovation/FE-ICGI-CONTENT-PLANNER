@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { api, type TeamMember } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 export function TeamPage() {
   const { user } = useAuth();
+  const confirmDialog = useConfirm();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -71,6 +74,24 @@ export function TeamPage() {
     }
   }
 
+  async function handleDelete(member: TeamMember) {
+    const ok = await confirmDialog(
+      `Hapus akun "${member.name}" secara permanen? Ini tidak bisa dibatalkan.`,
+      { confirmLabel: "Ya, Hapus Permanen" }
+    );
+    if (!ok) return;
+    setDeletingId(member.id);
+    setError(null);
+    try {
+      await api.deleteTeamMember(member.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus akun");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 780 }}>
       <span className="eyebrow">Redaksi</span>
@@ -124,13 +145,23 @@ export function TeamPage() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        onClick={() => handleToggleActive(m)}
-                        disabled={isSelf}
-                        className={`btn btn--sm ${m.isActive ? "btn--danger" : ""}`}
-                      >
-                        {m.isActive ? "Nonaktifkan" : "Aktifkan"}
-                      </button>
+                      <div className="btn-row">
+                        <button
+                          onClick={() => handleToggleActive(m)}
+                          disabled={isSelf}
+                          className={`btn btn--sm ${m.isActive ? "btn--danger" : ""}`}
+                        >
+                          {m.isActive ? "Nonaktifkan" : "Aktifkan"}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m)}
+                          disabled={isSelf || deletingId === m.id}
+                          className="btn btn--sm btn--danger"
+                          title="Hapus permanen"
+                        >
+                          {deletingId === m.id ? "Menghapus..." : "Hapus"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

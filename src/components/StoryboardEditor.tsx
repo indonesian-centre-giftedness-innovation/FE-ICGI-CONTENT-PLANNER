@@ -7,18 +7,23 @@ import { UploadProgressBar } from "./UploadProgressBar";
 export function StoryboardEditor({
   storyboard,
   onChanged,
+  draftPreviewText,
 }: {
   storyboard: Storyboard;
   onChanged: () => void;
+  /** Draft/hasil AI dari konten yang terhubung — ditampilkan buat gampang copy-paste ke dialog scene. Kosongkan kalau storyboard standalone. */
+  draftPreviewText?: string | null;
 }) {
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
+  const [dialogue, setDialogue] = useState("");
   const [duration, setDuration] = useState("3");
   const [isAdding, setIsAdding] = useState(false);
   const [uploadingSketchId, setUploadingSketchId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   async function handleUploadSketch(sceneId: string, file: File) {
     setUploadingSketchId(sceneId);
@@ -53,9 +58,11 @@ export function StoryboardEditor({
     try {
       await api.addScene(storyboard.id, {
         description: description.trim() || undefined,
+        dialogue: dialogue.trim() || undefined,
         durationSeconds: Number(duration) || 0,
       });
       setDescription("");
+      setDialogue("");
       setDuration("3");
       onChanged();
     } catch (err) {
@@ -65,7 +72,7 @@ export function StoryboardEditor({
     }
   }
 
-  async function handleUpdateScene(sceneId: string, field: "description" | "durationSeconds", value: string) {
+  async function handleUpdateScene(sceneId: string, field: "description" | "dialogue" | "durationSeconds", value: string) {
     try {
       await api.updateScene(sceneId, {
         [field]: field === "durationSeconds" ? Number(value) || 0 : value,
@@ -95,6 +102,18 @@ export function StoryboardEditor({
     }
   }
 
+  async function handleCopyDraft() {
+    if (!draftPreviewText) return;
+    try {
+      await navigator.clipboard.writeText(draftPreviewText);
+      setCopyStatus("Tersalin!");
+    } catch {
+      setCopyStatus("Gagal menyalin, salin manual saja");
+    } finally {
+      setTimeout(() => setCopyStatus(null), 2000);
+    }
+  }
+
   const totalDuration = storyboard.scenes.reduce((sum, s) => sum + s.durationSeconds, 0);
 
   return (
@@ -115,7 +134,7 @@ export function StoryboardEditor({
           </p>
         )}
 
-        <div className="stack" style={{ marginBottom: 24 }}>
+        <div className="stack" style={{ marginBottom: 16 }}>
           {storyboard.scenes.map((scene, idx) => (
             <div key={scene.id} className="panel">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -150,67 +169,94 @@ export function StoryboardEditor({
 
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 {/* kotak sketsa — ukuran konsisten & jadi target drag-drop dari library */}
-                <div
-                  className={`scene-sketch-box${dragOverSceneId === scene.id ? " scene-sketch-box--dragover" : ""}`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOverSceneId(scene.id);
-                  }}
-                  onDragLeave={() => setDragOverSceneId(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const templateId = e.dataTransfer.getData("text/plain");
-                    if (templateId) handleDropTemplate(scene.id, templateId);
-                  }}
-                >
-                  {scene.sketchImageGdriveId ? (
-                    <img src={storyboardSketchUrl(scene.id)} alt="Sketsa scene" />
-                  ) : (
-                    <span className="scene-sketch-box__placeholder">
-                      Drag sketsa dari library, atau upload manual
-                    </span>
+                <div style={{ flexShrink: 0 }}>
+                  <div
+                    className={`scene-sketch-box${dragOverSceneId === scene.id ? " scene-sketch-box--dragover" : ""}`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOverSceneId(scene.id);
+                    }}
+                    onDragLeave={() => setDragOverSceneId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const templateId = e.dataTransfer.getData("text/plain");
+                      if (templateId) handleDropTemplate(scene.id, templateId);
+                    }}
+                  >
+                    {scene.sketchImageGdriveId ? (
+                      <img src={storyboardSketchUrl(scene.id)} alt="Sketsa scene" />
+                    ) : (
+                      <span className="scene-sketch-box__placeholder">
+                        Drag sketsa dari library, atau upload manual
+                      </span>
+                    )}
+                  </div>
+                  {scene.sketchLabel && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        marginTop: 4,
+                        width: 220,
+                      }}
+                    >
+                      {scene.sketchLabel}
+                    </div>
                   )}
                 </div>
 
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
                   <label className="field">
-                    <span className="field__label">Deskripsi</span>
+                    <span className="field__label">Deskripsi / Aksi</span>
                     <textarea
                       defaultValue={scene.description ?? ""}
-                      rows={2}
-                      className="textarea"
+                      className="textarea scene-textarea"
                       onBlur={(e) => handleUpdateScene(scene.id, "description", e.target.value)}
                     />
                   </label>
 
-                  <label className="field" style={{ marginBottom: 8, maxWidth: 160 }}>
-                    <span className="field__label">Durasi (detik)</span>
-                    <input
-                      type="number"
-                      defaultValue={scene.durationSeconds}
-                      className="input"
-                      onBlur={(e) => handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
+                  <label className="field">
+                    <span className="field__label">Dialog / Sound Notes</span>
+                    <textarea
+                      defaultValue={scene.dialogue ?? ""}
+                      className="textarea scene-textarea"
+                      onBlur={(e) => handleUpdateScene(scene.id, "dialogue", e.target.value)}
                     />
                   </label>
 
-                  <label className="btn btn--sm" style={{ cursor: "pointer" }}>
-                    {uploadingSketchId === scene.id
-                      ? "Mengunggah..."
-                      : scene.sketchImageGdriveId
-                      ? "Ganti Sketsa"
-                      : "Upload Sketsa Manual"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={uploadingSketchId === scene.id}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleUploadSketch(scene.id, file);
-                        e.target.value = "";
-                      }}
-                      style={{ display: "none" }}
-                    />
-                  </label>
+                  <div className="btn-row" style={{ alignItems: "flex-end" }}>
+                    <label className="field" style={{ marginBottom: 0, maxWidth: 140 }}>
+                      <span className="field__label">Durasi (detik)</span>
+                      <input
+                        type="number"
+                        defaultValue={scene.durationSeconds}
+                        className="input"
+                        onBlur={(e) => handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
+                      />
+                    </label>
+
+                    <label className="btn btn--sm" style={{ cursor: "pointer" }}>
+                      {uploadingSketchId === scene.id
+                        ? "Mengunggah..."
+                        : scene.sketchImageGdriveId
+                        ? "Ganti Sketsa"
+                        : "Upload Sketsa Manual"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingSketchId === scene.id}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadSketch(scene.id, file);
+                          e.target.value = "";
+                        }}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  </div>
                   {uploadingSketchId === scene.id && uploadProgress !== null && (
                     <UploadProgressBar percent={uploadProgress} />
                   )}
@@ -223,12 +269,19 @@ export function StoryboardEditor({
         <form onSubmit={handleAddScene} className="panel panel--dashed">
           <span className="eyebrow">Tambah scene baru</span>
           <label className="field">
-            <span className="field__label">Deskripsi</span>
+            <span className="field__label">Deskripsi / Aksi</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="textarea"
+              className="textarea scene-textarea"
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Dialog / Sound Notes</span>
+            <textarea
+              value={dialogue}
+              onChange={(e) => setDialogue(e.target.value)}
+              className="textarea scene-textarea"
             />
           </label>
           <label className="field" style={{ marginBottom: 12, maxWidth: 160 }}>
@@ -246,7 +299,24 @@ export function StoryboardEditor({
         </form>
       </div>
 
-      <SketchTemplateGallery />
+      <div className="storyboard-layout__side">
+        <div className="storyboard-layout__side-sticky">
+          {draftPreviewText !== undefined && draftPreviewText !== null && draftPreviewText.trim() !== "" && (
+            <div className="panel draft-preview-panel">
+              <span className="eyebrow">Draft Konten (AI/Manual)</span>
+              <p className="text-muted" style={{ fontSize: 12, marginTop: 0 }}>
+                Salin bagian yang relevan ke kolom Dialog di scene.
+              </p>
+              <div className="draft-preview-panel__body">{draftPreviewText}</div>
+              <button type="button" onClick={handleCopyDraft} className="btn btn--sm" style={{ width: "100%" }}>
+                {copyStatus || "📋 Salin Semua Teks"}
+              </button>
+            </div>
+          )}
+
+          <SketchTemplateGallery />
+        </div>
+      </div>
     </div>
   );
 }

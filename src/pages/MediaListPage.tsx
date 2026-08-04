@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, type MediaAssetSummary } from "../lib/api";
+import { api, mediaFileUrl, type MediaAssetSummary } from "../lib/api";
+
+function MediaThumb({ item }: { item: MediaAssetSummary }) {
+  const isImage = item.mimeType?.startsWith("image/");
+  const isVideo = item.mimeType?.startsWith("video/");
+
+  if (item.latestVersion && isImage) {
+    return <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="media-grid__thumb" />;
+  }
+  if (item.latestVersion && isVideo) {
+    return (
+      <video src={mediaFileUrl(item.latestVersion.id)} muted className="media-grid__thumb" />
+    );
+  }
+  return (
+    <div className="media-grid__thumb media-grid__thumb--file">
+      {item.fileName}
+    </div>
+  );
+}
 
 export function MediaListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<MediaAssetSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -13,6 +33,19 @@ export function MediaListPage() {
       .then(setItems)
       .finally(() => setIsLoading(false));
   }, []);
+
+  async function handleDownload(e: React.MouseEvent, item: MediaAssetSummary) {
+    e.stopPropagation();
+    if (!item.latestVersion) return;
+    setDownloadingId(item.id);
+    try {
+      await api.downloadMediaVersion(item.latestVersion.id, item.fileName);
+    } catch {
+      // gagal diam-diam di sini, halaman detail tetap punya pesan error kalau perlu
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   return (
     <div>
@@ -26,8 +59,7 @@ export function MediaListPage() {
         </Link>
       </div>
       <p className="text-muted" style={{ marginBottom: 24 }}>
-        Semua poster/video yang sudah diunggah, baik yang menempel ke konten maupun berdiri
-        sendiri. Untuk approve/review, buka menu <strong>Review</strong>.
+        Semua poster/video yang sudah diunggah. Untuk approve/review, buka menu <strong>Review</strong>.
       </p>
 
       {isLoading && <p className="text-muted">Memuat...</p>}
@@ -39,50 +71,29 @@ export function MediaListPage() {
       )}
 
       {!isLoading && items.length > 0 && (
-        <div className="table-wrap">
-          <table className="dtable">
-            <thead>
-              <tr>
-                <th>File</th>
-                <th>Konten</th>
-                <th>Status Versi Terbaru</th>
-                <th>Jumlah Versi</th>
-                <th>Diunggah</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((m) => (
-                <tr
-                  key={m.id}
-                  className="row-clickable"
-                  onClick={() => navigate(m.content ? `/content/${m.contentId}/media` : "/media/standalone")}
+        <div className="media-grid">
+          {items.map((m) => (
+            <div
+              key={m.id}
+              className="media-grid__item"
+              onClick={() => navigate(m.content ? `/content/${m.contentId}/media` : "/media/standalone")}
+              title={m.fileName}
+            >
+              <MediaThumb item={m} />
+              {!m.content && <span className="media-grid__badge">Standalone</span>}
+              {m.latestVersion && (
+                <button
+                  onClick={(e) => handleDownload(e, m)}
+                  disabled={downloadingId === m.id}
+                  className="media-grid__download"
+                  title="Unduh file"
                 >
-                  <td style={{ fontWeight: 700 }}>{m.fileName}</td>
-                  <td>
-                    {m.content ? m.content.title : <span className="text-muted">Standalone</span>}
-                  </td>
-                  <td>
-                    {m.latestVersion ? (
-                      <span
-                        className="stamp"
-                        style={{
-                          color: m.latestVersion.status === "approved" ? "var(--green)" : "var(--blue)",
-                        }}
-                      >
-                        {m.latestVersion.status === "approved" ? "Approved" : "Menunggu Review"}
-                      </span>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td>{m.versionCount}</td>
-                  <td className="text-muted" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
-                    {new Date(m.createdAt).toLocaleDateString("id-ID")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {downloadingId === m.id ? "…" : "⬇"}
+                </button>
+              )}
+              <div className="media-grid__caption">{m.fileName}</div>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -95,7 +95,7 @@ export function MediaAssetCard({
 
       <div className="stack" style={{ marginTop: 12 }}>
         {sortedVersions.map((v) => (
-          <MediaVersionBlock key={v.id} version={v} mimeType={asset.mimeType} isLeadAdmin={isLeadAdmin} onChanged={onChanged} />
+          <MediaVersionBlock key={v.id} version={v} mimeType={asset.mimeType} fileName={asset.fileName} isLeadAdmin={isLeadAdmin} onChanged={onChanged} />
         ))}
       </div>
     </div>
@@ -105,11 +105,13 @@ export function MediaAssetCard({
 function MediaVersionBlock({
   version,
   mimeType,
+  fileName,
   isLeadAdmin,
   onChanged,
 }: {
   version: MediaVersion;
   mimeType: string | null;
+  fileName: string;
   isLeadAdmin: boolean;
   onChanged: () => void;
 }) {
@@ -118,6 +120,7 @@ function MediaVersionBlock({
   const [isLoadingComments, setIsLoadingComments] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [pendingPin, setPendingPin] = useState<{ x: number; y: number } | null>(null);
   const [pinCommentText, setPinCommentText] = useState("");
@@ -259,6 +262,19 @@ function MediaVersionBlock({
     }
   }
 
+  async function handleDownload() {
+    setIsDownloading(true);
+    setError(null);
+    try {
+      const suffix = version.versionNumber > 1 ? `-v${version.versionNumber}` : "";
+      await api.downloadMediaVersion(version.id, fileName.replace(/(\.[^.]+)?$/, `${suffix}$1`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengunduh file");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   const topLevelComments = comments.filter((c) => !c.parentCommentId);
   const repliesOf = (parentId: string) => comments.filter((c) => c.parentCommentId === parentId);
 
@@ -273,11 +289,16 @@ function MediaVersionBlock({
             {version.status === "approved" ? "Disetujui" : "Menunggu Review"}
           </span>
         </span>
-        {isLeadAdmin && version.status === "pending" && (
-          <button onClick={handleApprove} disabled={isApproving} className="btn btn--sm btn--green">
-            {isApproving ? "Memproses..." : "✓ Approve versi ini"}
+        <div className="btn-row">
+          <button onClick={handleDownload} disabled={isDownloading} className="btn btn--sm">
+            {isDownloading ? "Mengunduh..." : "⬇ Unduh"}
           </button>
-        )}
+          {isLeadAdmin && version.status === "pending" && (
+            <button onClick={handleApprove} disabled={isApproving} className="btn btn--sm btn--green">
+              {isApproving ? "Memproses..." : "✓ Approve versi ini"}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p className="callout callout--error" style={{ marginTop: 10 }}>{error}</p>}
@@ -437,6 +458,33 @@ function MediaVersionBlock({
                 </button>
               </div>
 
+              {repliesOf(c.id).length > 0 && (
+                <div className="stack stack--sm" style={{ marginLeft: 16, marginTop: 6 }}>
+                  {repliesOf(c.id).map((r) => (
+                    <div key={r.id} style={{ fontSize: 12, borderLeft: "3px solid var(--ink)", paddingLeft: 8 }}>
+                      <div>
+                        <strong>{r.user?.name || "-"}:</strong> {r.commentText}
+                      </div>
+                      <div className="btn-row" style={{ marginTop: 2 }}>
+                        <button
+                          onClick={() => {
+                            setReplyingTo(replyingTo === c.id ? null : c.id);
+                            setReplyText(r.user?.name ? `@${r.user.name} ` : "");
+                          }}
+                          className="btn btn--sm btn--ghost"
+                          style={{ fontSize: 11 }}
+                        >
+                          Balas
+                        </button>
+                        <button onClick={() => handleDeleteComment(r.id)} className="btn btn--sm btn--ghost" style={{ color: "var(--red)", fontSize: 11 }}>
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {replyingTo === c.id && (
                 <div className="btn-row" style={{ marginTop: 6, marginLeft: 16 }}>
                   <input
@@ -450,19 +498,6 @@ function MediaVersionBlock({
                   <button onClick={() => submitReply(c.id)} className="btn btn--sm btn--primary">
                     Kirim
                   </button>
-                </div>
-              )}
-
-              {repliesOf(c.id).length > 0 && (
-                <div className="stack stack--sm" style={{ marginLeft: 16, marginTop: 6 }}>
-                  {repliesOf(c.id).map((r) => (
-                    <div key={r.id} style={{ fontSize: 12, borderLeft: "3px solid var(--ink)", paddingLeft: 8 }}>
-                      <strong>{r.user?.name || "-"}:</strong> {r.commentText}{" "}
-                      <button onClick={() => handleDeleteComment(r.id)} className="btn btn--sm btn--ghost" style={{ color: "var(--red)", fontSize: 11 }}>
-                        Hapus
-                      </button>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>

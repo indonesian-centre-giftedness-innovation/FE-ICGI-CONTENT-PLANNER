@@ -50,7 +50,7 @@ export function MediaStandalonePage() {
   }
 
   return (
-    <div style={{ maxWidth: 860 }}>
+    <div style={{ maxWidth: 1000 }}>
       <p style={{ marginBottom: 4 }}>
         <Link to="/media">&larr; Kembali ke daftar media</Link>
       </p>

@@ -11,21 +11,21 @@ export function StoryboardStandalonePage() {
   const [error, setError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  async function load() {
+  async function load(isInitial = false) {
     if (!storyboardId) return;
-    setIsLoading(true);
+    if (isInitial) setIsLoading(true);
     setError(null);
     try {
       setStoryboard(await api.getStoryboardById(storyboardId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat storyboard");
     } finally {
-      setIsLoading(false);
+      if (isInitial) setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyboardId]);
 

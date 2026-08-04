@@ -117,7 +117,6 @@ export type ContentStatus =
   | "published";
 
 export type ContentPillar = "edukasi" | "hiburan" | "promosi";
-export type ContentFunnel = "tofu" | "mofu" | "bofu";
 
 export type Content = {
   id: string;
@@ -128,7 +127,6 @@ export type Content = {
   requiresApproval: boolean;
   platform: string | null;
   pillar: ContentPillar | null;
-  funnel: ContentFunnel | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -140,7 +138,9 @@ export type StoryboardScene = {
   storyboardId: string;
   sceneOrder: number;
   sketchImageGdriveId: string | null;
+  sketchLabel: string | null;
   description: string | null;
+  dialogue: string | null;
   durationSeconds: number;
   createdAt: string;
 };
@@ -311,14 +311,12 @@ export const api = {
     search?: string;
     platform?: string;
     pillar?: string;
-    funnel?: string;
   }) => {
     const qs = new URLSearchParams();
     if (params?.status) qs.set("status", params.status);
     if (params?.search) qs.set("search", params.search);
     if (params?.platform) qs.set("platform", params.platform);
     if (params?.pillar) qs.set("pillar", params.pillar);
-    if (params?.funnel) qs.set("funnel", params.funnel);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<Content[]>(`/content${suffix}`);
   },
@@ -328,7 +326,6 @@ export const api = {
     bodyDraft?: string;
     platform?: string;
     pillar?: ContentPillar;
-    funnel?: ContentFunnel;
   }) =>
     request<Content>("/content", {
       method: "POST",
@@ -336,7 +333,7 @@ export const api = {
     }),
   updateContent: (
     id: string,
-    data: Partial<Pick<Content, "title" | "bodyDraft" | "platform" | "pillar" | "funnel" | "status">>
+    data: Partial<Pick<Content, "title" | "bodyDraft" | "platform" | "pillar" | "status">>
   ) =>
     request<Content>(`/content/${id}`, {
       method: "PATCH",
@@ -355,9 +352,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ contentId: contentId || undefined, title }),
     }),
+  deleteStoryboard: (id: string) =>
+    request<{ message: string }>(`/storyboard/${id}`, { method: "DELETE" }),
   addScene: (
     storyboardId: string,
-    data: { description?: string; durationSeconds?: number; sketchImageGdriveId?: string }
+    data: { description?: string; dialogue?: string; durationSeconds?: number; sketchImageGdriveId?: string }
   ) =>
     request<StoryboardScene>(`/storyboard/${storyboardId}/scenes`, {
       method: "POST",
@@ -365,7 +364,7 @@ export const api = {
     }),
   updateScene: (
     sceneId: string,
-    data: Partial<Pick<StoryboardScene, "description" | "durationSeconds" | "sketchImageGdriveId">>
+    data: Partial<Pick<StoryboardScene, "description" | "dialogue" | "durationSeconds" | "sketchImageGdriveId">>
   ) =>
     request<StoryboardScene>(`/storyboard/scenes/${sceneId}`, {
       method: "PATCH",
@@ -465,6 +464,8 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+  deleteTeamMember: (id: string) =>
+    request<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
 
   // --- approval flow ---
   submitForReview: (contentId: string) =>
@@ -517,6 +518,8 @@ export const api = {
     request<{ message: string }>(`/media/${assetId}`, { method: "DELETE" }),
   approveMediaVersion: (versionId: string) =>
     request<MediaVersion>(`/media/versions/${versionId}/approve`, { method: "POST" }),
+  downloadMediaVersion: (versionId: string, filename: string) =>
+    downloadFile(`/media/versions/${versionId}/file`, filename),
   listMediaComments: (versionId: string) =>
     request<MediaComment[]>(`/media/versions/${versionId}/comments`),
   addMediaComment: (

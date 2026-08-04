@@ -1,32 +1,37 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { api, type Storyboard } from "../lib/api";
+import { api, type Storyboard, type Content } from "../lib/api";
 import { StoryboardEditor } from "../components/StoryboardEditor";
 
 export function StoryboardPage() {
   const { id: contentId } = useParams<{ id: string }>();
 
   const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
+  const [content, setContent] = useState<Content | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  async function load() {
+  async function load(isInitial = false) {
     if (!contentId) return;
-    setIsLoading(true);
+    if (isInitial) setIsLoading(true);
     setError(null);
     try {
-      const data = await api.getStoryboardByContent(contentId);
+      const [data, contentData] = await Promise.all([
+        api.getStoryboardByContent(contentId),
+        api.getContent(contentId),
+      ]);
       setStoryboard(data);
+      setContent(contentData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat storyboard");
     } finally {
-      setIsLoading(false);
+      if (isInitial) setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentId]);
 
@@ -87,7 +92,11 @@ export function StoryboardPage() {
 
       {storyboard && (
         <div style={{ marginTop: 20 }}>
-          <StoryboardEditor storyboard={storyboard} onChanged={load} />
+          <StoryboardEditor
+            storyboard={storyboard}
+            onChanged={load}
+            draftPreviewText={content?.bodyAiGenerated || content?.bodyDraft || null}
+          />
         </div>
       )}
     </div>

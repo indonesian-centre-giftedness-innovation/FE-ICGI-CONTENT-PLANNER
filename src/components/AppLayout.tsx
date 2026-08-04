@@ -84,33 +84,51 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </Link>
 
         <nav className="sidebar__nav">
-          <div className="sidebar__section">
-            <span className="sidebar__section-label">Utama</span>
-            <SidebarLink to="/dashboard">Dashboard</SidebarLink>
-            <SidebarLink to="/content/new">+ Draft Baru</SidebarLink>
-            <NavLink
-              to="/notifications"
-              className={({ isActive }) => "sidebar__link" + (isActive ? " sidebar__link--active" : "")}
-            >
-              <span>Notifikasi</span>
-              {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
-            </NavLink>
-          </div>
+          {isLeadAdmin ? (
+            <>
+              <div className="sidebar__section">
+                <span className="sidebar__section-label">Utama</span>
+                <SidebarLink to="/dashboard">Dashboard</SidebarLink>
+                <NavLink
+                  to="/notifications"
+                  className={({ isActive }) => "sidebar__link" + (isActive ? " sidebar__link--active" : "")}
+                >
+                  <span>Notifikasi</span>
+                  {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
+                </NavLink>
+                <SidebarLink to="/todos">To-Do</SidebarLink>
+                <SidebarLink to="/media">Media</SidebarLink>
+              </div>
 
-          <div className="sidebar__section">
-            <span className="sidebar__section-label">Produksi</span>
-            <SidebarLink to="/todos">To-Do</SidebarLink>
-            <SidebarLink to="/storyboard">Storyboard</SidebarLink>
-            <SidebarLink to="/media">Media</SidebarLink>
-          </div>
+              <div className="sidebar__section">
+                <span className="sidebar__section-label">Redaksi</span>
+                <SidebarLink to="/review">Review</SidebarLink>
+                <SidebarLink to="/prompt-templates">Prompt Templates</SidebarLink>
+                <SidebarLink to="/team">Anggota Tim</SidebarLink>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sidebar__section">
+                <span className="sidebar__section-label">Utama</span>
+                <SidebarLink to="/dashboard">Dashboard</SidebarLink>
+                <SidebarLink to="/content/new">+ Draft Baru</SidebarLink>
+                <NavLink
+                  to="/notifications"
+                  className={({ isActive }) => "sidebar__link" + (isActive ? " sidebar__link--active" : "")}
+                >
+                  <span>Notifikasi</span>
+                  {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
+                </NavLink>
+              </div>
 
-          {isLeadAdmin && (
-            <div className="sidebar__section">
-              <span className="sidebar__section-label">Redaksi</span>
-              <SidebarLink to="/review">Review</SidebarLink>
-              <SidebarLink to="/prompt-templates">Prompt Templates</SidebarLink>
-              <SidebarLink to="/team">Anggota Tim</SidebarLink>
-            </div>
+              <div className="sidebar__section">
+                <span className="sidebar__section-label">Produksi</span>
+                <SidebarLink to="/todos">To-Do</SidebarLink>
+                <SidebarLink to="/storyboard">Storyboard</SidebarLink>
+                <SidebarLink to="/media">Media</SidebarLink>
+              </div>
+            </>
           )}
         </nav>
 

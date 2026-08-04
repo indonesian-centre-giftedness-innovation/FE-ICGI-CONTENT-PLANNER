@@ -634,7 +634,7 @@ select:focus-visible {
   .storyboard-layout {
     grid-template-columns: 1fr;
   }
-  .sketch-gallery {
+  .storyboard-layout__side-sticky {
     position: static;
   }
 }
@@ -919,16 +919,29 @@ table.dtable {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .storyboard-layout__main {
   min-width: 0;
 }
 
-.sketch-gallery {
+.storyboard-layout__side {
+  min-width: 0;
+}
+
+.storyboard-layout__side-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   position: sticky;
   top: 20px;
+  max-height: calc(100vh - 40px);
+}
+
+.sketch-gallery {
+  /* posisi sticky sekarang ditangani wrapper .storyboard-layout__side-sticky
+     supaya panel Draft Konten ikut nempel bareng, bukan cuma gallery ini */
 }
 
 .sketch-gallery__grid {
@@ -936,6 +949,9 @@ table.dtable {
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 14px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .sketch-gallery__item {
@@ -1046,10 +1062,127 @@ tr.row-clickable:hover {
   background: #fff8dc;
 }
 
+/* ============================================================
+   SCENE CARD — ukuran tidak menyesuaikan panjang teks, isinya
+   yang scroll (deskripsi & dialog)
+   ============================================================ */
+
+.scene-textarea {
+  resize: none;
+  height: 76px;
+  overflow-y: auto;
+}
+
+.draft-preview-panel {
+  margin-bottom: 20px;
+}
+
+.draft-preview-panel__body {
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--paper-alt);
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 8px 0 10px;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;
   color: #6b6b70;
   font-family: var(--font-mono);
   font-size: 13px;
+}
+/* ============================================================
+   MEDIA GRID (halaman Media — galeri visual murni)
+   ============================================================ */
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.media-grid__item {
+  position: relative;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.media-grid__item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.media-grid__thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  background: var(--paper-alt);
+}
+
+.media-grid__thumb--file {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
+  color: #6b6b70;
+}
+
+.media-grid__badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.media-grid__download {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.media-grid__caption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 6px;
+  border-top: 2px solid var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

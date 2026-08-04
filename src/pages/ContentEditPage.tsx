@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { api, type Content, type ContentStatus, type Approval, type PromptTemplate, type ContentPillar, type ContentFunnel } from "../lib/api";
+import { api, type Content, type ContentStatus, type Approval, type PromptTemplate, type ContentPillar } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { StatusStamp, STATUS_LABEL } from "../components/StatusStamp";
-import { PILLAR_LABEL, FUNNEL_LABEL } from "../components/PillarFunnelBadge";
+import { PILLAR_LABEL } from "../components/PillarFunnelBadge";
 import { PlatformPicker } from "../components/PlatformPicker";
 import { ContentTodoList } from "../components/ContentTodoList";
 import { useConfirm } from "../context/ConfirmContext";
@@ -18,7 +18,6 @@ export function ContentEditPage() {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("");
   const [pillar, setPillar] = useState<ContentPillar | "">("");
-  const [funnel, setFunnel] = useState<ContentFunnel | "">("");
   const [bodyDraft, setBodyDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -49,7 +48,6 @@ export function ContentEditPage() {
         setTitle(data.title);
         setPlatform(data.platform ?? "");
         setPillar(data.pillar ?? "");
-        setFunnel(data.funnel ?? "");
         setBodyDraft(data.bodyDraft ?? "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Gagal memuat konten"))
@@ -112,7 +110,6 @@ export function ContentEditPage() {
         title: title.trim(),
         platform: platform.trim(),
         pillar: pillar || null,
-        funnel: funnel || null,
         bodyDraft,
       });
       setContent(updated);
@@ -283,21 +280,6 @@ export function ContentEditPage() {
               </select>
             </label>
 
-            <label className="field" style={{ marginBottom: 0, flex: 1, minWidth: 160 }}>
-              <span className="field__label">Funnel</span>
-              <select
-                value={funnel}
-                onChange={(e) => setFunnel(e.target.value as ContentFunnel | "")}
-                className="select"
-              >
-                <option value="">- Pilih funnel -</option>
-                {Object.entries(FUNNEL_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
 
           <label className="field" style={{ marginBottom: 0 }}>
