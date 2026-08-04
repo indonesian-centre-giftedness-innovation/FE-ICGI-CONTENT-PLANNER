@@ -592,3 +592,6 @@ export const api = {
   exportStoryboardPdf: (storyboardId: string) =>
     downloadFile(`/export/storyboard/${storyboardId}/pdf`, `storyboard-${storyboardId}.pdf`),
 };
+
+
+//bismillah kelar 
