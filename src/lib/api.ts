@@ -555,6 +555,12 @@ export const api = {
     if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
     return requestFormData<Content>(`/ai/content/${contentId}/generate`, fd);
   },
+  /** Generate draft AI TANPA konten tersimpan dulu — dipakai di form "Draft Konten Baru". */
+  generateDraftAi: (data: { title?: string; platform?: string; promptTemplateId?: string; bodyDraft?: string }) =>
+    request<{ text: string }>("/ai/draft/generate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   generateImageWithAi: (contentId: string, data: { prompt: string; referenceFile?: File }) => {
     const fd = new FormData();
     fd.append("prompt", data.prompt);

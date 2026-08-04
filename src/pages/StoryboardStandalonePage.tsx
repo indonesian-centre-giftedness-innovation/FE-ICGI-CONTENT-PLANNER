@@ -10,6 +10,8 @@ export function StoryboardStandalonePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showScript, setShowScript] = useState(false);
+  const [scriptText, setScriptText] = useState("");
 
   async function load(isInitial = false) {
     if (!storyboardId) return;
@@ -28,6 +30,18 @@ export function StoryboardStandalonePage() {
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyboardId]);
+
+  // Naskah/script manual disimpan lokal per storyboard supaya tidak hilang
+  // saat halaman di-refresh (murni catatan tempel-sendiri, bukan data terkirim ke server).
+  useEffect(() => {
+    if (!storyboardId) return;
+    setScriptText(localStorage.getItem(`storyboard-script:${storyboardId}`) || "");
+  }, [storyboardId]);
+
+  function handleScriptChange(value: string) {
+    setScriptText(value);
+    if (storyboardId) localStorage.setItem(`storyboard-script:${storyboardId}`, value);
+  }
 
   async function handleExportPdf() {
     if (!storyboardId) return;
@@ -55,9 +69,18 @@ export function StoryboardStandalonePage() {
           <span className="eyebrow">Rencana Produksi · Standalone</span>
           <h1 style={{ marginBottom: 0 }}>{storyboard.title || "Storyboard tanpa judul"}</h1>
         </div>
-        <button onClick={handleExportPdf} disabled={isExportingPdf} className="btn btn--sm">
-          {isExportingPdf ? "Membuat PDF..." : "📄 Export PDF"}
-        </button>
+        <div className="btn-row">
+          <button
+            type="button"
+            onClick={() => setShowScript((v) => !v)}
+            className={`btn btn--sm${showScript ? " btn--primary" : ""}`}
+          >
+            📝 Script
+          </button>
+          <button onClick={handleExportPdf} disabled={isExportingPdf} className="btn btn--sm">
+            {isExportingPdf ? "Membuat PDF..." : "📄 Export PDF"}
+          </button>
+        </div>
       </div>
       <p className="text-muted" style={{ marginTop: 6, marginBottom: 20 }}>
         Storyboard ini tidak terikat draft konten mana pun.
@@ -65,7 +88,13 @@ export function StoryboardStandalonePage() {
 
       {error && <p className="callout callout--error">{error}</p>}
 
-      <StoryboardEditor storyboard={storyboard} onChanged={load} />
+      <StoryboardEditor
+        storyboard={storyboard}
+        onChanged={load}
+        manualScriptVisible={showScript}
+        manualScriptText={scriptText}
+        onManualScriptChange={handleScriptChange}
+      />
     </div>
   );
 }

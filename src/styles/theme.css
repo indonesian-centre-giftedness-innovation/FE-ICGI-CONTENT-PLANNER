@@ -636,6 +636,13 @@ select:focus-visible {
   }
   .storyboard-layout__side-sticky {
     position: static;
+    max-height: none;
+  }
+  .draft-preview-panel__body {
+    max-height: 240px;
+  }
+  .sketch-gallery__grid {
+    max-height: 320px;
   }
 }
 
@@ -937,19 +944,26 @@ table.dtable {
   position: sticky;
   top: 20px;
   max-height: calc(100vh - 40px);
+  /* jaring pengaman: kalau total tinggi Draft Konten + Library Sketsa
+     ternyata lebih tinggi dari layar, wrapper ini sendiri yang scroll —
+     supaya tidak ada bagian yang "kepotong" tanpa cara untuk melihatnya */
+  overflow-y: auto;
+  padding-bottom: 8px;
 }
 
 .sketch-gallery {
-  /* posisi sticky sekarang ditangani wrapper .storyboard-layout__side-sticky
-     supaya panel Draft Konten ikut nempel bareng, bukan cuma gallery ini */
+  /* posisi sticky ditangani wrapper .storyboard-layout__side-sticky.
+     Ukuran kotak ini TETAP (tidak menyesuaikan jumlah template) — lihat
+     max-height di .sketch-gallery__grid, isinya sendiri yang scroll. */
 }
 
 .sketch-gallery__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: min-content;
   gap: 10px;
   margin-bottom: 14px;
-  max-height: 320px;
+  max-height: 420px;
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -970,7 +984,7 @@ table.dtable {
 
 .sketch-gallery__item img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 78px;
   object-fit: cover;
   display: block;
   pointer-events: none;
@@ -1078,7 +1092,7 @@ tr.row-clickable:hover {
 }
 
 .draft-preview-panel__body {
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
   white-space: pre-wrap;
   font-size: 13px;
@@ -1088,6 +1102,15 @@ tr.row-clickable:hover {
   border-radius: 4px;
   padding: 10px;
   margin: 8px 0 10px;
+}
+
+.draft-manual-textarea {
+  height: 320px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 10px;
+  background: var(--paper-alt);
 }
 
 .empty-state {

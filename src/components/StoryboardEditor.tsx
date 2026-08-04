@@ -8,11 +8,18 @@ export function StoryboardEditor({
   storyboard,
   onChanged,
   draftPreviewText,
+  manualScriptVisible,
+  manualScriptText,
+  onManualScriptChange,
 }: {
   storyboard: Storyboard;
   onChanged: () => void;
   /** Draft/hasil AI dari konten yang terhubung — ditampilkan buat gampang copy-paste ke dialog scene. Kosongkan kalau storyboard standalone. */
   draftPreviewText?: string | null;
+  /** Untuk storyboard standalone: tampilkan kotak script kosong yang bisa ditempel manual (toggle dari tombol "Script" di halaman). */
+  manualScriptVisible?: boolean;
+  manualScriptText?: string;
+  onManualScriptChange?: (value: string) => void;
 }) {
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
@@ -311,6 +318,21 @@ export function StoryboardEditor({
               <button type="button" onClick={handleCopyDraft} className="btn btn--sm" style={{ width: "100%" }}>
                 {copyStatus || "📋 Salin Semua Teks"}
               </button>
+            </div>
+          )}
+
+          {manualScriptVisible && (
+            <div className="panel draft-preview-panel">
+              <span className="eyebrow">Script</span>
+              <p className="text-muted" style={{ fontSize: 12, marginTop: 0 }}>
+                Tempel naskah/script kamu di sini sebagai referensi saat mengisi Deskripsi &amp; Dialog tiap scene.
+              </p>
+              <textarea
+                value={manualScriptText ?? ""}
+                onChange={(e) => onManualScriptChange?.(e.target.value)}
+                className="textarea draft-manual-textarea"
+                placeholder="Tempel naskah/script di sini..."
+              />
             </div>
           )}
 

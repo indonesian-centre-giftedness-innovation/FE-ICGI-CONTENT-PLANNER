@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, type ContentPillar } from "../lib/api";
+import { api, type ContentPillar, type PromptTemplate } from "../lib/api";
 import { PILLAR_LABEL } from "../components/PillarFunnelBadge";
 import { PlatformPicker } from "../components/PlatformPicker";
 
@@ -15,6 +15,38 @@ export function ContentNewPage() {
   const [bodyDraft, setBodyDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .listPromptTemplates()
+      .then((all) => setTemplates(all.filter((t) => t.isActive)))
+      .catch(() => {});
+  }, []);
+
+  async function handleGenerateAi() {
+    setIsGenerating(true);
+    setError(null);
+    setAiNotice(null);
+    try {
+      const { text } = await api.generateDraftAi({
+        title: title.trim() || undefined,
+        platform: platform || undefined,
+        promptTemplateId: selectedTemplateId || undefined,
+        bodyDraft: bodyDraft.trim() || undefined,
+      });
+      setBodyDraft(text);
+      setAiNotice("✨ Draft AI berhasil dibuat — silakan diedit lagi kalau perlu.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal generate lewat AI");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,13 +109,13 @@ export function ContentNewPage() {
         </label>
 
         <div className="field">
-          <span className="field__label">Platform (opsional)</span>
+          <span className="field__label">Platform</span>
           <PlatformPicker value={platform} onChange={setPlatform} />
         </div>
 
         <div className="btn-row" style={{ marginBottom: 14, marginTop: 14 }}>
           <label className="field" style={{ marginBottom: 0, flex: 1, minWidth: 160 }}>
-            <span className="field__label">Pillar (opsional)</span>
+            <span className="field__label">Pillar</span>
             <select
               value={pillar}
               onChange={(e) => setPillar(e.target.value as ContentPillar | "")}
@@ -101,13 +133,47 @@ export function ContentNewPage() {
         </div>
 
         <label className="field">
-          <span className="field__label">Draft awal (opsional, bisa di-generate AI nanti)</span>
+          <span className="field__label">Brand voice template</span>
+          <select
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+            className="select"
+          >
+            <option value="">Tanpa brand voice template</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span className="field__label" style={{ marginBottom: 0 }}>
+              Draft
+            </span>
+            <button
+              type="button"
+              onClick={handleGenerateAi}
+              disabled={isGenerating}
+              className="btn btn--sm btn--blue"
+            >
+              {isGenerating ? "Generating..." : "✨ Generate AI"}
+            </button>
+          </div>
           <textarea
             value={bodyDraft}
             onChange={(e) => setBodyDraft(e.target.value)}
             rows={6}
             className="textarea"
+            placeholder="Tulis ide/arahan singkat di sini, lalu klik Generate AI kalau mau dikembangkan otomatis — atau tulis draft lengkap sendiri."
           />
+          {aiNotice && (
+            <p className="callout callout--success" style={{ marginTop: 8, fontSize: 12 }}>
+              {aiNotice}
+            </p>
+          )}
         </label>
 
         {error && <p className="callout callout--error" style={{ marginBottom: 14 }}>{error}</p>}
