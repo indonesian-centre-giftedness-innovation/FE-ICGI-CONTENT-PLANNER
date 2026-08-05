@@ -827,6 +827,20 @@ table.dtable {
   padding: 1px 8px;
 }
 
+.notif-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2px solid var(--ink);
+  flex-shrink: 0;
+}
+
+.notif-card {
+  transition: background 0.15s ease;
+}
+
 /* ============================================================
    CONFIRM DIALOG (ganti confirm() browser bawaan)
    ============================================================ */
@@ -1087,6 +1101,13 @@ tr.row-clickable:hover {
   overflow-y: auto;
 }
 
+.btn--add-scene {
+  width: 100%;
+  margin-top: 4px;
+  padding: 16px;
+  font-size: 15px;
+}
+
 .draft-preview-panel {
   margin-bottom: 20px;
 }
@@ -1111,6 +1132,23 @@ tr.row-clickable:hover {
   line-height: 1.5;
   margin: 8px 0 10px;
   background: var(--paper-alt);
+}
+
+.ai-command-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ai-command-card {
+  padding: 14px;
+}
+
+@media (max-width: 640px) {
+  .ai-command-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .empty-state {
@@ -1208,4 +1246,69 @@ tr.row-clickable:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ============================================================
+   LIGHTBOX — preview gambar/video fullscreen dari halaman Media
+   ============================================================ */
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 12, 0.92);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: var(--paper);
+  border: var(--border-w) solid var(--ink);
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lightbox-content {
+  max-width: min(90vw, 1000px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lightbox-media {
+  max-width: 100%;
+  max-height: 82vh;
+  border: var(--border-w) solid var(--ink);
+  border-radius: var(--radius);
+  background: #000;
+}
+
+.lightbox-caption {
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .lightbox-backdrop {
+    padding: 20px 12px;
+  }
+  .lightbox-close {
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+  }
 }

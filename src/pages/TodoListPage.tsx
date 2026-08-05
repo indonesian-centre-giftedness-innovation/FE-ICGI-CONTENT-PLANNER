@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Todo, type SimpleUser, type Content } from "../lib/api";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
 
 type Filter = "all" | "pending" | "done";
 
 export function TodoListPage() {
   const confirmDialog = useConfirm();
+  const { user } = useAuth();
+  const isLeadAdmin = user?.role === "lead_admin";
   const [todos, setTodos] = useState<Todo[]>([]);
   const [users, setUsers] = useState<SimpleUser[]>([]);
   const [contents, setContents] = useState<Content[]>([]);
@@ -227,19 +230,25 @@ export function TodoListPage() {
               </option>
             ))}
           </select>
-          <select
-            value={newAssignee}
-            onChange={(e) => setNewAssignee(e.target.value)}
-            className="select"
-            style={{ maxWidth: 200 }}
-          >
-            <option value="">Belum di-assign</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+          {isLeadAdmin ? (
+            <select
+              value={newAssignee}
+              onChange={(e) => setNewAssignee(e.target.value)}
+              className="select"
+              style={{ maxWidth: 200 }}
+            >
+              <option value="">Belum di-assign</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-muted" style={{ fontSize: 12, alignSelf: "center" }}>
+              Otomatis di-assign ke kamu
+            </span>
+          )}
         </div>
 
         <button type="submit" disabled={isAdding} className="btn btn--primary">

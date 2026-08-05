@@ -23,9 +23,6 @@ export function StoryboardEditor({
 }) {
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
-  const [dialogue, setDialogue] = useState("");
-  const [duration, setDuration] = useState("3");
   const [isAdding, setIsAdding] = useState(false);
   const [uploadingSketchId, setUploadingSketchId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -58,19 +55,11 @@ export function StoryboardEditor({
     }
   }
 
-  async function handleAddScene(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleAddScene() {
     setIsAdding(true);
     setError(null);
     try {
-      await api.addScene(storyboard.id, {
-        description: description.trim() || undefined,
-        dialogue: dialogue.trim() || undefined,
-        durationSeconds: Number(duration) || 0,
-      });
-      setDescription("");
-      setDialogue("");
-      setDuration("3");
+      await api.addScene(storyboard.id, { durationSeconds: 3 });
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menambah scene");
@@ -273,37 +262,14 @@ export function StoryboardEditor({
           ))}
         </div>
 
-        <form onSubmit={handleAddScene} className="panel panel--dashed">
-          <span className="eyebrow">Tambah scene baru</span>
-          <label className="field">
-            <span className="field__label">Deskripsi / Aksi</span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="textarea scene-textarea"
-            />
-          </label>
-          <label className="field">
-            <span className="field__label">Dialog / Sound Notes</span>
-            <textarea
-              value={dialogue}
-              onChange={(e) => setDialogue(e.target.value)}
-              className="textarea scene-textarea"
-            />
-          </label>
-          <label className="field" style={{ marginBottom: 12, maxWidth: 160 }}>
-            <span className="field__label">Durasi (detik)</span>
-            <input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="input"
-            />
-          </label>
-          <button type="submit" disabled={isAdding} className="btn btn--primary">
-            {isAdding ? "Menambah..." : "+ Tambah Scene"}
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={handleAddScene}
+          disabled={isAdding}
+          className="btn btn--primary btn--add-scene"
+        >
+          {isAdding ? "Menambah..." : "+ Tambah Scene"}
+        </button>
       </div>
 
       <div className="storyboard-layout__side">

@@ -1,25 +1,35 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { api, type Content, type ContentStatus, type Approval, type PromptTemplate, type ContentPillar } from "../lib/api";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
+import { api, type Content, type ContentStatus, type Approval, type ContentPillar } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { StatusStamp, STATUS_LABEL } from "../components/StatusStamp";
-import { PILLAR_LABEL } from "../components/PillarFunnelBadge";
 import { PlatformPicker } from "../components/PlatformPicker";
+import { PillarPicker } from "../components/PillarPicker";
 import { ContentTodoList } from "../components/ContentTodoList";
+import { DraftVersionCards } from "../components/DraftVersionCards";
 import { useConfirm } from "../context/ConfirmContext";
 
+/**
+ * Form Draft Konten — dipakai untuk BUAT baru (/content/new) maupun EDIT (/content/:id/edit).
+ * Kalau `id` tidak ada di URL berarti mode "baru": cuma tampil field dasar + Simpan/Batal.
+ * Setelah tersimpan, otomatis pindah ke mode edit (URL berganti /content/:id/edit) dengan
+ * fitur lengkap (todo, approval, link ke storyboard/kalender/media, dst).
+ */
 export function ContentEditPage() {
   const { id } = useParams<{ id: string }>();
+  const isNew = !id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefillDate = searchParams.get("date"); // dari klik tanggal kosong di kalender
   const { user } = useAuth();
   const confirmDialog = useConfirm();
 
   const [content, setContent] = useState<Content | null>(null);
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("");
+  const [platforms, setPlatforms] = useState<string[]>([]);
   const [pillar, setPillar] = useState<ContentPillar | "">("");
   const [bodyDraft, setBodyDraft] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -28,25 +38,15 @@ export function ContentEditPage() {
   const [revisionNotes, setRevisionNotes] = useState("");
   const [isActing, setIsActing] = useState(false);
 
-  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [aiInstructions, setAiInstructions] = useState("");
-  const [aiReferenceFile, setAiReferenceFile] = useState<File | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [imageReferenceFile, setImageReferenceFile] = useState<File | null>(null);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [imageGenNotice, setImageGenNotice] = useState<string | null>(null);
-
   useEffect(() => {
     if (!id) return;
+    setIsLoading(true);
     api
       .getContent(id)
       .then((data) => {
         setContent(data);
         setTitle(data.title);
-        setPlatform(data.platform ?? "");
+        setPlatforms(data.platforms ?? []);
         setPillar(data.pillar ?? "");
         setBodyDraft(data.bodyDraft ?? "");
       })
@@ -54,61 +54,36 @@ export function ContentEditPage() {
       .finally(() => setIsLoading(false));
 
     api.getApprovalHistory(id).then(setHistory).catch(() => {});
-    api
-      .listPromptTemplates()
-      .then((all) => setTemplates(all.filter((t) => t.isActive)))
-      .catch(() => {});
   }, [id]);
 
-  async function handleGenerateAi() {
-    if (!id) return;
-    setIsGenerating(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await api.generateWithAi(id, {
-        promptTemplateId: selectedTemplateId || undefined,
-        instructions: aiInstructions.trim() || undefined,
-        referenceFile: aiReferenceFile || undefined,
-      });
-      setContent(updated);
-      setNotice("Draft AI berhasil digenerate. Cek hasilnya di bawah, lalu edit draft utama kalau perlu dipakai.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal generate lewat AI");
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleGenerateImage() {
-    if (!id || !imagePrompt.trim()) return;
-    setIsGeneratingImage(true);
-    setError(null);
-    setImageGenNotice(null);
-    try {
-      await api.generateImageWithAi(id, {
-        prompt: imagePrompt.trim(),
-        referenceFile: imageReferenceFile || undefined,
-      });
-      setImageGenNotice("Gambar berhasil digenerate dan tersimpan di Media & Review, menunggu approve.");
-      setImagePrompt("");
-      setImageReferenceFile(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal generate gambar lewat AI");
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  }
-
   async function handleSave() {
-    if (!id) return;
     setIsSaving(true);
     setError(null);
     setNotice(null);
     try {
-      const updated = await api.updateContent(id, {
+      if (isNew) {
+        if (!title.trim()) {
+          setError("Judul wajib diisi");
+          setIsSaving(false);
+          return;
+        }
+        const created = await api.createContent({
+          title: title.trim(),
+          platforms,
+          pillar: pillar || undefined,
+          bodyDraft: bodyDraft || undefined,
+        });
+        if (prefillDate) {
+          await api
+            .createCalendarItem({ contentId: created.id, scheduledDate: prefillDate, platform: platforms[0] || undefined })
+            .catch(() => {});
+        }
+        navigate(`/content/${created.id}/edit`, { replace: true });
+        return;
+      }
+      const updated = await api.updateContent(id!, {
         title: title.trim(),
-        platform: platform.trim(),
+        platforms,
         pillar: pillar || null,
         bodyDraft,
       });
@@ -126,7 +101,7 @@ export function ContentEditPage() {
     if (!(await confirmDialog("Hapus konten ini? Tindakan ini tidak bisa dibatalkan."))) return;
     try {
       await api.deleteContent(id);
-      navigate("/dashboard");
+      navigate("/content");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus");
     }
@@ -232,186 +207,105 @@ export function ContentEditPage() {
   }
 
   if (isLoading) return <p className="text-muted">Memuat...</p>;
-  if (!content) return <p className="callout callout--error">{error || "Konten tidak ditemukan"}</p>;
+  if (!isNew && !content) return <p className="callout callout--error">{error || "Konten tidak ditemukan"}</p>;
 
   const isLeadAdmin = user?.role === "lead_admin";
-  const isOwner = content.createdBy === user?.userId;
+  const isOwner = content ? content.createdBy === user?.userId : true;
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <p style={{ marginBottom: 4 }}>
-        <Link to="/dashboard">&larr; Kembali ke dashboard</Link>
-      </p>
+      <Link to="/content" className="btn btn--sm" style={{ marginBottom: 16, display: "inline-flex" }}>
+        &larr; Kembali ke daftar konten
+      </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
-        <h1 style={{ marginBottom: 0 }}>Edit Draft</h1>
-        <StatusStamp status={content.status} />
+        <h1 style={{ marginBottom: 0 }}>{isNew ? "Draft Konten Baru" : "Edit Draft"}</h1>
+        {content && <StatusStamp status={content.status} />}
       </div>
       <p className="text-muted" style={{ marginBottom: 20 }}>
-        {content.requiresApproval ? "Konten ini perlu approval Lead/Admin sebelum tayang." : "Konten ini auto-publish (dibuat oleh Lead/Admin)."}
+        {isNew
+          ? "Langkah 1 — Ide & Draft"
+          : content?.requiresApproval
+          ? "Konten ini perlu approval Lead/Admin sebelum tayang."
+          : "Konten ini auto-publish (dibuat oleh Lead/Admin)."}
       </p>
 
       <div className="stack">
         <div className="panel">
           <label className="field">
             <span className="field__label">Judul</span>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="input" />
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input"
+              placeholder={isNew ? "Misal: Promo Ramadhan 2026" : undefined}
+            />
           </label>
 
           <div className="field">
-            <span className="field__label">Platform</span>
-            <PlatformPicker value={platform} onChange={setPlatform} />
+            <span className="field__label">Platform {isNew && "(opsional, bisa pilih lebih dari satu)"}</span>
+            <PlatformPicker value={platforms} onChange={setPlatforms} />
           </div>
 
-          <div className="btn-row" style={{ marginBottom: 14 }}>
-            <label className="field" style={{ marginBottom: 0, flex: 1, minWidth: 160 }}>
-              <span className="field__label">Pillar</span>
-              <select
-                value={pillar}
-                onChange={(e) => setPillar(e.target.value as ContentPillar | "")}
-                className="select"
-              >
-                <option value="">- Pilih pillar -</option>
-                {Object.entries(PILLAR_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
+          <div className="field">
+            <span className="field__label">Pillar {isNew && "(opsional)"}</span>
+            <PillarPicker value={pillar} onChange={setPillar} />
           </div>
 
-          <label className="field" style={{ marginBottom: 0 }}>
+          <div className="field" style={{ marginBottom: 0 }}>
             <span className="field__label">Draft</span>
-            <textarea value={bodyDraft} onChange={(e) => setBodyDraft(e.target.value)} rows={10} className="textarea" />
-          </label>
-
-          <div className="panel panel--flat" style={{ background: "var(--paper-alt)", marginTop: 16 }}>
-            <span className="eyebrow">Generate dengan AI (Gemini)</span>
-            <div className="btn-row" style={{ marginBottom: 10 }}>
-              <select
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="select"
-                style={{ maxWidth: 280 }}
-              >
-                <option value="">Tanpa brand voice template</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <label className="field" style={{ marginBottom: 10 }}>
-              <span className="field__label">Instruksi tambahan (opsional)</span>
-              <textarea
-                value={aiInstructions}
-                onChange={(e) => setAiInstructions(e.target.value)}
-                rows={2}
-                className="textarea"
-                placeholder="Misal: buat lebih singkat, tambahkan call-to-action, fokus ke promo akhir bulan..."
-              />
-            </label>
-            <label className="field" style={{ marginBottom: 10 }}>
-              <span className="field__label">Lampirkan foto referensi (opsional)</span>
-              <input
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e) => setAiReferenceFile(e.target.files?.[0] || null)}
-                className="input"
-              />
-              {aiReferenceFile && (
-                <span className="text-muted" style={{ fontSize: 12 }}>{aiReferenceFile.name}</span>
-              )}
-            </label>
-            <button onClick={handleGenerateAi} disabled={isGenerating} className="btn btn--blue">
-              {isGenerating ? "Generating..." : "✨ Generate Draft AI"}
-            </button>
+            <DraftVersionCards
+              key={id || "new"}
+              title={title}
+              platforms={platforms}
+              pillar={pillar}
+              value={bodyDraft}
+              onChange={setBodyDraft}
+            />
           </div>
 
-          <div className="panel panel--flat" style={{ background: "var(--paper-alt)", marginTop: 12 }}>
-            <span className="eyebrow">Generate Gambar dengan AI</span>
-            <label className="field" style={{ marginBottom: 10 }}>
-              <span className="field__label">Deskripsikan gambar yang mau dibuat</span>
-              <textarea
-                value={imagePrompt}
-                onChange={(e) => setImagePrompt(e.target.value)}
-                rows={2}
-                className="textarea"
-                placeholder="Misal: poster promo diskon 50%, warna cerah, gaya flat design..."
-              />
-            </label>
-            <label className="field" style={{ marginBottom: 10 }}>
-              <span className="field__label">Gambar referensi/gaya (opsional)</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageReferenceFile(e.target.files?.[0] || null)}
-                className="input"
-              />
-              {imageReferenceFile && (
-                <span className="text-muted" style={{ fontSize: 12 }}>{imageReferenceFile.name}</span>
-              )}
-            </label>
-            <button onClick={handleGenerateImage} disabled={isGeneratingImage || !imagePrompt.trim()} className="btn btn--blue">
-              {isGeneratingImage ? "Generating..." : "🖼️ Generate Gambar"}
-            </button>
-            {imageGenNotice && (
-              <p className="callout callout--success" style={{ marginTop: 10 }}>
-                {imageGenNotice}{" "}
-                <Link to={`/content/${id}/media`}>Buka Media & Review →</Link>
-              </p>
-            )}
-            <p className="text-muted" style={{ fontSize: 11, marginTop: 8, marginBottom: 0 }}>
-              Catatan: kuota generate gambar gratis lebih ketat dari generate teks. Kalau gagal,
-              coba lagi beberapa saat lagi.
+          {error && (
+            <p className="callout callout--error" style={{ marginTop: 14 }}>
+              {error}
             </p>
-          </div>
-
-          {content.bodyAiGenerated && (
-            <div style={{ marginTop: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="field__label" style={{ marginBottom: 0 }}>Hasil generate AI terakhir</span>
-                <button
-                  onClick={() => setBodyDraft(content.bodyAiGenerated || "")}
-                  className="btn btn--sm"
-                >
-                  Pakai sebagai draft
-                </button>
-              </div>
-              <div className="callout" style={{ whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)", fontSize: 13, marginTop: 6 }}>
-                {content.bodyAiGenerated}
-              </div>
-            </div>
           )}
-
-          {error && <p className="callout callout--error" style={{ marginTop: 14 }}>{error}</p>}
-          {notice && <p className="callout callout--success" style={{ marginTop: 14 }}>{notice}</p>}
+          {notice && (
+            <p className="callout callout--success" style={{ marginTop: 14 }}>
+              {notice}
+            </p>
+          )}
 
           <div className="btn-row" style={{ marginTop: 16 }}>
             <button onClick={handleSave} disabled={isSaving} className="btn btn--primary">
-              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+              {isSaving ? "Menyimpan..." : isNew ? "Simpan Draft" : "Simpan Perubahan"}
             </button>
-            <Link to={`/content/${id}/storyboard`} className="btn">
-              Storyboard
-            </Link>
-            <Link to={`/content/${id}/calendar`} className="btn">
-              Kalender & To-Do
-            </Link>
-            <Link to={`/content/${id}/media`} className="btn">
-              Media & Review
-            </Link>
-            <button onClick={handleDelete} disabled={isSaving} className="btn btn--danger">
-              Hapus
-            </button>
+            {isNew ? (
+              <Link to="/content" className="btn">
+                Batal
+              </Link>
+            ) : (
+              <>
+                <Link to={`/content/${id}/storyboard`} className="btn">
+                  Storyboard
+                </Link>
+                <Link to={`/content/${id}/calendar`} className="btn">
+                  Kalender & To-Do
+                </Link>
+                <Link to={`/content/${id}/media`} className="btn">
+                  Media & Review
+                </Link>
+                <button onClick={handleDelete} disabled={isSaving} className="btn btn--danger">
+                  Hapus
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {id && <ContentTodoList contentId={id} />}
+        {!isNew && id && <ContentTodoList contentId={id} />}
 
-        {(isOwner || isLeadAdmin) && (content.status === "draft" || content.status === "revisi") && (
+        {content && (isOwner || isLeadAdmin) && (content.status === "draft" || content.status === "revisi") && (
           <div className="panel">
             <span className="eyebrow">Langkah berikutnya</span>
             <button onClick={handleSubmitForReview} disabled={isActing} className="btn btn--blue">
@@ -420,7 +314,7 @@ export function ContentEditPage() {
           </div>
         )}
 
-        {isLeadAdmin && content.status === "pending_review" && (
+        {content && isLeadAdmin && content.status === "pending_review" && (
           <div className="panel">
             <span className="eyebrow">Aksi Review (Lead/Admin)</span>
             <div className="btn-row" style={{ marginBottom: 12 }}>
@@ -430,12 +324,7 @@ export function ContentEditPage() {
             </div>
             <label className="field" style={{ marginBottom: 8 }}>
               <span className="field__label">Catatan revisi (wajib diisi untuk minta revisi)</span>
-              <textarea
-                value={revisionNotes}
-                onChange={(e) => setRevisionNotes(e.target.value)}
-                rows={2}
-                className="textarea"
-              />
+              <textarea value={revisionNotes} onChange={(e) => setRevisionNotes(e.target.value)} rows={2} className="textarea" />
             </label>
             <button onClick={handleRequestRevision} disabled={isActing} className="btn btn--danger">
               Minta Revisi
@@ -443,7 +332,7 @@ export function ContentEditPage() {
           </div>
         )}
 
-        {isLeadAdmin && content.status === "approved" && (
+        {content && isLeadAdmin && content.status === "approved" && (
           <div className="panel">
             <span className="eyebrow">Siap tayang</span>
             <button onClick={handlePublish} disabled={isActing} className="btn btn--primary">
@@ -472,7 +361,7 @@ export function ContentEditPage() {
           </div>
         )}
 
-        {isLeadAdmin && (
+        {content && isLeadAdmin && (
           <div className="panel panel--dashed">
             <span className="eyebrow">Override status manual (darurat/testing)</span>
             <div className="btn-row">

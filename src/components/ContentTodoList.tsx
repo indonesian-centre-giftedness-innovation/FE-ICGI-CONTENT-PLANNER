@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { api, type Todo, type SimpleUser } from "../lib/api";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
 
 export function ContentTodoList({ contentId }: { contentId: string }) {
   const confirmDialog = useConfirm();
+  const { user } = useAuth();
+  const isLeadAdmin = user?.role === "lead_admin";
   const [todos, setTodos] = useState<Todo[]>([]);
   const [users, setUsers] = useState<SimpleUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,14 +115,20 @@ export function ContentTodoList({ contentId }: { contentId: string }) {
           className="input"
           style={{ flex: 1, minWidth: 140 }}
         />
-        <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className="select" style={{ maxWidth: 160 }}>
-          <option value="">Belum di-assign</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
+        {isLeadAdmin ? (
+          <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className="select" style={{ maxWidth: 160 }}>
+            <option value="">Belum di-assign</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-muted" style={{ fontSize: 12, alignSelf: "center" }}>
+            Otomatis di-assign ke kamu
+          </span>
+        )}
         <button type="submit" className="btn btn--sm btn--primary">
           + Tambah
         </button>

@@ -98,7 +98,7 @@ export function PromptTemplatesPage() {
       <span className="eyebrow">Redaksi</span>
       <h1>Prompt Templates</h1>
       <p className="text-muted" style={{ marginBottom: 20 }}>
-        Brand voice/gaya penulisan yang bisa dipilih tim saat generate draft pakai AI.
+        Brand voice/gaya penulisan yang bisa dipilih tim saat generate draft pakai AI. Semua orang bisa buat/edit template.
       </p>
 
       {error && <p className="callout callout--error">{error}</p>}

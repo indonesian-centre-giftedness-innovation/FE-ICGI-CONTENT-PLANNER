@@ -3,8 +3,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { ContentNewPage } from "./pages/ContentNewPage";
+import { ContentListPage } from "./pages/ContentListPage";
 import { ContentEditPage } from "./pages/ContentEditPage";
+import { ImageGeneratePage } from "./pages/ImageGeneratePage";
 import { StoryboardPage } from "./pages/StoryboardPage";
 import { CalendarTodoPage } from "./pages/CalendarTodoPage";
 import { ApprovalQueuePage } from "./pages/ApprovalQueuePage";
@@ -36,10 +37,18 @@ export default function App() {
             }
           />
           <Route
+            path="/content"
+            element={
+              <ProtectedRoute>
+                <ContentListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/content/new"
             element={
               <ProtectedRoute>
-                <ContentNewPage />
+                <ContentEditPage />
               </ProtectedRoute>
             }
           />
@@ -48,6 +57,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ContentEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/image-generate"
+            element={
+              <ProtectedRoute>
+                <ImageGeneratePage />
               </ProtectedRoute>
             }
           />
@@ -126,7 +143,7 @@ export default function App() {
           <Route
             path="/review"
             element={
-              <ProtectedRoute requireRole="lead_admin">
+              <ProtectedRoute>
                 <ReviewPage />
               </ProtectedRoute>
             }
@@ -142,7 +159,7 @@ export default function App() {
           <Route
             path="/prompt-templates"
             element={
-              <ProtectedRoute requireRole="lead_admin">
+              <ProtectedRoute>
                 <PromptTemplatesPage />
               </ProtectedRoute>
             }

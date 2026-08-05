@@ -89,6 +89,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="sidebar__section">
                 <span className="sidebar__section-label">Utama</span>
                 <SidebarLink to="/dashboard">Dashboard</SidebarLink>
+                <SidebarLink to="/content">Konten</SidebarLink>
                 <NavLink
                   to="/notifications"
                   className={({ isActive }) => "sidebar__link" + (isActive ? " sidebar__link--active" : "")}
@@ -103,6 +104,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="sidebar__section">
                 <span className="sidebar__section-label">Redaksi</span>
                 <SidebarLink to="/review">Review</SidebarLink>
+                <SidebarLink to="/image-generate">Generate Gambar</SidebarLink>
                 <SidebarLink to="/prompt-templates">Prompt Templates</SidebarLink>
                 <SidebarLink to="/team">Anggota Tim</SidebarLink>
               </div>
@@ -112,7 +114,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="sidebar__section">
                 <span className="sidebar__section-label">Utama</span>
                 <SidebarLink to="/dashboard">Dashboard</SidebarLink>
-                <SidebarLink to="/content/new">+ Draft Baru</SidebarLink>
+                <SidebarLink to="/content">Konten</SidebarLink>
                 <NavLink
                   to="/notifications"
                   className={({ isActive }) => "sidebar__link" + (isActive ? " sidebar__link--active" : "")}
@@ -127,6 +129,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <SidebarLink to="/todos">To-Do</SidebarLink>
                 <SidebarLink to="/storyboard">Storyboard</SidebarLink>
                 <SidebarLink to="/media">Media</SidebarLink>
+                <SidebarLink to="/image-generate">Generate Gambar</SidebarLink>
+              </div>
+
+              <div className="sidebar__section">
+                <span className="sidebar__section-label">Redaksi</span>
+                <SidebarLink to="/review">Review</SidebarLink>
+                <SidebarLink to="/prompt-templates">Prompt Templates</SidebarLink>
               </div>
             </>
           )}

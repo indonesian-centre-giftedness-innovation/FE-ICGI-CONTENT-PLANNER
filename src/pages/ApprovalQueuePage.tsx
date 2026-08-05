@@ -54,7 +54,7 @@ export function ApprovalQueuePage() {
               {items.map((c) => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 700 }}>{c.title}</td>
-                  <td>{c.platform || "-"}</td>
+                  <td>{c.platforms && c.platforms.length ? c.platforms.join(", ") : "-"}</td>
                   <td className="text-muted">{c.author?.name || "-"}</td>
                   <td className="text-muted" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
                     {new Date(c.updatedAt).toLocaleDateString("id-ID")}

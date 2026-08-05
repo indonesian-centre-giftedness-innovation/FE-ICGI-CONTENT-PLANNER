@@ -125,7 +125,7 @@ export type Content = {
   bodyAiGenerated: string | null;
   status: ContentStatus;
   requiresApproval: boolean;
-  platform: string | null;
+  platforms: string[];
   pillar: ContentPillar | null;
   createdBy: string;
   createdAt: string;
@@ -213,7 +213,7 @@ export type Approval = {
 export type AppNotification = {
   id: string;
   userId: string;
-  type: "approval" | "revisi" | "comment" | "media_approved";
+  type: "approval" | "revisi" | "comment" | "reply" | "media_approved" | "submitted" | "published";
   contentId: string | null;
   message: string;
   isRead: boolean;
@@ -317,6 +317,7 @@ export const api = {
     if (params?.search) qs.set("search", params.search);
     if (params?.platform) qs.set("platform", params.platform);
     if (params?.pillar) qs.set("pillar", params.pillar);
+    // catatan: filter platform di server cek "apakah platform ini ada di array platforms konten"
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<Content[]>(`/content${suffix}`);
   },
@@ -324,7 +325,7 @@ export const api = {
   createContent: (data: {
     title: string;
     bodyDraft?: string;
-    platform?: string;
+    platforms?: string[];
     pillar?: ContentPillar;
   }) =>
     request<Content>("/content", {
@@ -333,7 +334,7 @@ export const api = {
     }),
   updateContent: (
     id: string,
-    data: Partial<Pick<Content, "title" | "bodyDraft" | "platform" | "pillar" | "status">>
+    data: Partial<Pick<Content, "title" | "bodyDraft" | "platforms" | "pillar" | "status">>
   ) =>
     request<Content>(`/content/${id}`, {
       method: "PATCH",
@@ -492,6 +493,9 @@ export const api = {
     request<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),
   markAllNotificationsRead: () =>
     request<{ message: string }>("/notifications/read-all", { method: "PATCH" }),
+  deleteNotification: (id: string) =>
+    request<{ message: string }>(`/notifications/${id}`, { method: "DELETE" }),
+  deleteAllNotifications: () => request<{ message: string }>("/notifications", { method: "DELETE" }),
 
   // --- media upload & review ---
   listAllMedia: () => request<MediaAssetSummary[]>("/media"),
@@ -555,8 +559,15 @@ export const api = {
     if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
     return requestFormData<Content>(`/ai/content/${contentId}/generate`, fd);
   },
-  /** Generate draft AI TANPA konten tersimpan dulu — dipakai di form "Draft Konten Baru". */
-  generateDraftAi: (data: { title?: string; platform?: string; promptTemplateId?: string; bodyDraft?: string }) =>
+  /** Generate draft AI TANPA konten tersimpan dulu — dipakai di form Draft Konten (baru & edit). */
+  generateDraftAi: (data: {
+    title?: string;
+    platforms?: string[];
+    pillar?: string;
+    promptTemplateId?: string;
+    bodyDraft?: string;
+    instructions?: string;
+  }) =>
     request<{ text: string }>("/ai/draft/generate", {
       method: "POST",
       body: JSON.stringify(data),
@@ -567,6 +578,19 @@ export const api = {
     if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
     return requestFormData<MediaAsset>(`/ai/content/${contentId}/generate-image`, fd);
   },
+  /** Generate gambar standalone TANPA simpan dulu — buat preview & revisi sebelum disimpan ke Media. */
+  generateStandaloneImage: (data: { prompt: string; referenceFile?: File }) => {
+    const fd = new FormData();
+    fd.append("prompt", data.prompt);
+    if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
+    return requestFormData<{ imageBase64: string; mimeType: string }>("/ai/image/generate", fd);
+  },
+  /** Simpan gambar hasil generate (yang sudah oke) sebagai media standalone. */
+  saveGeneratedImage: (data: { imageBase64: string; mimeType: string; fileName?: string }) =>
+    request<MediaAsset>("/ai/image/save", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // --- prompt templates (brand voice) ---
   listPromptTemplates: () => request<PromptTemplate[]>("/prompt-templates"),
@@ -592,6 +616,3 @@ export const api = {
   exportStoryboardPdf: (storyboardId: string) =>
     downloadFile(`/export/storyboard/${storyboardId}/pdf`, `storyboard-${storyboardId}.pdf`),
 };
-
-
-//bismillah kelar 

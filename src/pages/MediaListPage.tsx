@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api, mediaFileUrl, type MediaAssetSummary } from "../lib/api";
 
 function MediaThumb({ item }: { item: MediaAssetSummary }) {
@@ -10,22 +10,47 @@ function MediaThumb({ item }: { item: MediaAssetSummary }) {
     return <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="media-grid__thumb" />;
   }
   if (item.latestVersion && isVideo) {
-    return (
-      <video src={mediaFileUrl(item.latestVersion.id)} muted className="media-grid__thumb" />
-    );
+    return <video src={mediaFileUrl(item.latestVersion.id)} muted className="media-grid__thumb" />;
   }
+  return <div className="media-grid__thumb media-grid__thumb--file">{item.fileName}</div>;
+}
+
+/** Lightbox fullscreen — klik thumbnail buka gambar/video penuh layar, bukan pindah halaman. */
+function MediaLightbox({ item, onClose }: { item: MediaAssetSummary; onClose: () => void }) {
+  const isImage = item.mimeType?.startsWith("image/");
+  const isVideo = item.mimeType?.startsWith("video/");
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="media-grid__thumb media-grid__thumb--file">
-      {item.fileName}
+    <div className="lightbox-backdrop" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose} title="Tutup (Esc)">
+        ✕
+      </button>
+      <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+        {item.latestVersion && isImage && (
+          <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="lightbox-media" />
+        )}
+        {item.latestVersion && isVideo && (
+          <video src={mediaFileUrl(item.latestVersion.id)} controls autoPlay className="lightbox-media" />
+        )}
+        <div className="lightbox-caption">{item.fileName}</div>
+      </div>
     </div>
   );
 }
 
 export function MediaListPage() {
-  const navigate = useNavigate();
   const [items, setItems] = useState<MediaAssetSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<MediaAssetSummary | null>(null);
 
   useEffect(() => {
     api
@@ -59,7 +84,7 @@ export function MediaListPage() {
         </Link>
       </div>
       <p className="text-muted" style={{ marginBottom: 24 }}>
-        Semua poster/video yang sudah diunggah. Untuk approve/review, buka menu <strong>Review</strong>.
+        Klik gambar/video buat lihat penuh layar. Untuk approve/komentar/review, buka menu <strong>Review</strong>.
       </p>
 
       {isLoading && <p className="text-muted">Memuat...</p>}
@@ -76,7 +101,7 @@ export function MediaListPage() {
             <div
               key={m.id}
               className="media-grid__item"
-              onClick={() => navigate(m.content ? `/content/${m.contentId}/media` : "/media/standalone")}
+              onClick={() => setPreviewItem(m)}
               title={m.fileName}
             >
               <MediaThumb item={m} />
@@ -96,6 +121,8 @@ export function MediaListPage() {
           ))}
         </div>
       )}
+
+      {previewItem && <MediaLightbox item={previewItem} onClose={() => setPreviewItem(null)} />}
     </div>
   );
 }
