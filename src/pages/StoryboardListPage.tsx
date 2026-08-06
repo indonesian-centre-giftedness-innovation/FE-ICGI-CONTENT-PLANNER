@@ -129,7 +129,7 @@ export function StoryboardListPage() {
                   <td style={{ fontWeight: 700 }}>
                     {sb.content?.title || sb.title || "(tanpa judul)"}
                   </td>
-                  <td>{sb.content?.platform || "-"}</td>
+                  <td>{sb.content?.platforms && sb.content.platforms.length ? sb.content.platforms.join(", ") : "-"}</td>
                   <td>
                     {sb.content ? (
                       <StatusStamp status={sb.content.status} />

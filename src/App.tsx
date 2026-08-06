@@ -7,7 +7,6 @@ import { ContentListPage } from "./pages/ContentListPage";
 import { ContentEditPage } from "./pages/ContentEditPage";
 import { StoryboardPage } from "./pages/StoryboardPage";
 import { CalendarTodoPage } from "./pages/CalendarTodoPage";
-import { ApprovalQueuePage } from "./pages/ApprovalQueuePage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { MediaReviewPage } from "./pages/MediaReviewPage";
 import { StoryboardListPage } from "./pages/StoryboardListPage";
@@ -120,14 +119,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <TodoListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/approval"
-            element={
-              <ProtectedRoute requireRole="lead_admin">
-                <ApprovalQueuePage />
               </ProtectedRoute>
             }
           />

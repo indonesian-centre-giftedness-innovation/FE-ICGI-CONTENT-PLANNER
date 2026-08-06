@@ -10,6 +10,7 @@ const TYPE_LABEL: Record<AppNotification["type"], string> = {
   reply: "Balasan",
   media_approved: "Media Disetujui",
   submitted: "Menunggu Review",
+  media_submitted: "Media Baru",
   published: "Tayang",
 };
 
@@ -20,6 +21,7 @@ const TYPE_COLOR: Record<AppNotification["type"], string> = {
   reply: "var(--blue)",
   media_approved: "var(--green)",
   submitted: "var(--yellow)",
+  media_submitted: "var(--yellow)",
   published: "var(--green)",
 };
 
@@ -29,6 +31,7 @@ const TYPE_STAMP: Record<AppNotification["type"], string> = {
   published: "approved",
   revisi: "revisi",
   submitted: "pending_review",
+  media_submitted: "pending_review",
   comment: "pending_review",
   reply: "pending_review",
 };
@@ -85,13 +88,20 @@ export function NotificationsPage() {
     }
   }
 
-  // klik kartu = otomatis ditandai dibaca, lalu buka kontennya kalau ada
+  // klik kartu = otomatis ditandai dibaca, lalu langsung buka HALAMAN YANG RELEVAN —
+  // notif soal media (upload baru/approved/komentar/balasan) langsung ke Media & Review-nya,
+  // bukan ke draft konten dulu. Notif soal draft (submit/approval/revisi/publish) ke edit draft.
+  const MEDIA_RELATED_TYPES: AppNotification["type"][] = ["media_submitted", "media_approved", "comment", "reply"];
+
   async function handleOpen(n: AppNotification) {
     if (!n.isRead) {
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       api.markNotificationRead(n.id).catch(() => {});
     }
-    if (n.content) {
+    const isMediaRelated = MEDIA_RELATED_TYPES.includes(n.type);
+    if (isMediaRelated) {
+      navigate(n.content ? `/content/${n.content.id}/media` : "/media/standalone");
+    } else if (n.content) {
       navigate(`/content/${n.content.id}/edit`);
     }
   }
@@ -171,9 +181,9 @@ export function NotificationsPage() {
               </div>
             </div>
             <p style={{ margin: "8px 0 0", fontWeight: n.isRead ? 400 : 600 }}>{n.message}</p>
-            {n.content && (
+            {(n.content || MEDIA_RELATED_TYPES.includes(n.type)) && (
               <p className="text-muted" style={{ fontSize: 12, marginTop: 4, marginBottom: 0 }}>
-                Klik untuk buka konten →
+                {MEDIA_RELATED_TYPES.includes(n.type) ? "Klik untuk buka media →" : "Klik untuk buka konten →"}
               </p>
             )}
           </div>

@@ -213,7 +213,7 @@ export type Approval = {
 export type AppNotification = {
   id: string;
   userId: string;
-  type: "approval" | "revisi" | "comment" | "reply" | "media_approved" | "submitted" | "published";
+  type: "approval" | "revisi" | "comment" | "reply" | "media_approved" | "submitted" | "media_submitted" | "published";
   contentId: string | null;
   message: string;
   isRead: boolean;
@@ -261,7 +261,7 @@ export type StoryboardSummary = {
   contentId: string | null;
   title: string | null;
   updatedAt: string;
-  content: { id: string; title: string; status: ContentStatus; platform: string | null } | null;
+  content: { id: string; title: string; status: ContentStatus; platforms: string[] } | null;
   sceneCount: number;
   totalDurationSeconds: number;
 };
@@ -272,7 +272,8 @@ export type MediaAssetSummary = {
   fileName: string;
   mimeType: string | null;
   createdAt: string;
-  content: { id: string; title: string; status: ContentStatus; platform: string | null } | null;
+  uploadedBy: string | null;
+  content: { id: string; title: string; status: ContentStatus; platforms: string[] } | null;
   latestVersion: MediaVersion | null;
   versionCount: number;
 };
@@ -467,25 +468,6 @@ export const api = {
     }),
   deleteTeamMember: (id: string) =>
     request<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
-
-  // --- approval flow ---
-  submitForReview: (contentId: string) =>
-    request<Content>(`/approval/${contentId}/submit`, { method: "POST" }),
-  listPendingApprovals: () => request<Content[]>("/approval/pending"),
-  getApprovalHistory: (contentId: string) =>
-    request<Approval[]>(`/approval/content/${contentId}`),
-  approveContent: (contentId: string, notes?: string) =>
-    request<Content>(`/approval/${contentId}/approve`, {
-      method: "POST",
-      body: JSON.stringify({ notes }),
-    }),
-  requestRevision: (contentId: string, notes: string) =>
-    request<Content>(`/approval/${contentId}/revisi`, {
-      method: "POST",
-      body: JSON.stringify({ notes }),
-    }),
-  publishContent: (contentId: string) =>
-    request<Content>(`/approval/${contentId}/publish`, { method: "POST" }),
 
   // --- notifications ---
   listNotifications: () => request<AppNotification[]>("/notifications"),

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
-import { api, type Content, type ContentStatus, type Approval, type ContentPillar } from "../lib/api";
+import { api, type Content, type ContentPillar } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { StatusStamp, STATUS_LABEL } from "../components/StatusStamp";
+import { StatusStamp } from "../components/StatusStamp";
 import { PlatformPicker } from "../components/PlatformPicker";
 import { PillarPicker } from "../components/PillarPicker";
 import { ContentTodoList } from "../components/ContentTodoList";
@@ -12,8 +12,11 @@ import { useConfirm } from "../context/ConfirmContext";
 /**
  * Form Draft Konten — dipakai untuk BUAT baru (/content/new) maupun EDIT (/content/:id/edit).
  * Kalau `id` tidak ada di URL berarti mode "baru": cuma tampil field dasar + Simpan/Batal.
- * Setelah tersimpan, otomatis pindah ke mode edit (URL berganti /content/:id/edit) dengan
- * fitur lengkap (todo, approval, link ke storyboard/kalender/media, dst).
+ *
+ * Draft SCRIPT tidak butuh approval/review sama sekali — siapa pun (pemiliknya) bisa langsung
+ * pakai draftnya tanpa harus disetujui Lead/Admin. Yang perlu direview cuma MEDIA (lihat halaman
+ * Media & Review). Lead/Admin tetap bisa BUKA draft orang lain untuk referensi, tapi read-only —
+ * tidak bisa edit langsung isi draft milik orang lain (lihat isReviewerMode).
  */
 export function ContentEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,10 +37,6 @@ export function ContentEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const [history, setHistory] = useState<Approval[]>([]);
-  const [revisionNotes, setRevisionNotes] = useState("");
-  const [isActing, setIsActing] = useState(false);
-
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
@@ -52,8 +51,6 @@ export function ContentEditPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Gagal memuat konten"))
       .finally(() => setIsLoading(false));
-
-    api.getApprovalHistory(id).then(setHistory).catch(() => {});
   }, [id]);
 
   async function handleSave() {
@@ -107,110 +104,14 @@ export function ContentEditPage() {
     }
   }
 
-  async function handleStatusChange(status: ContentStatus) {
-    if (!id) return;
-    setIsSaving(true);
-    setError(null);
-    try {
-      const updated = await api.updateContent(id, { status });
-      setContent(updated);
-      setNotice(`Status diubah menjadi "${STATUS_LABEL[status]}".`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengubah status");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function refreshHistory() {
-    if (!id) return;
-    try {
-      setHistory(await api.getApprovalHistory(id));
-    } catch {
-      // riwayat gagal dimuat, tidak fatal
-    }
-  }
-
-  async function handleSubmitForReview() {
-    if (!id) return;
-    setIsActing(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await api.submitForReview(id);
-      setContent(updated);
-      setNotice(
-        updated.status === "pending_review"
-          ? "Konten disubmit dan menunggu review Lead/Admin."
-          : "Konten langsung disetujui (dibuat oleh Lead/Admin)."
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal submit untuk review");
-    } finally {
-      setIsActing(false);
-    }
-  }
-
-  async function handleApprove() {
-    if (!id) return;
-    setIsActing(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await api.approveContent(id);
-      setContent(updated);
-      setNotice("Konten disetujui. Creator sudah diberi notifikasi.");
-      await refreshHistory();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal approve konten");
-    } finally {
-      setIsActing(false);
-    }
-  }
-
-  async function handleRequestRevision() {
-    if (!id) return;
-    if (!revisionNotes.trim()) {
-      setError("Catatan revisi wajib diisi sebelum meminta revisi.");
-      return;
-    }
-    setIsActing(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await api.requestRevision(id, revisionNotes.trim());
-      setContent(updated);
-      setRevisionNotes("");
-      setNotice("Permintaan revisi terkirim. Creator sudah diberi notifikasi.");
-      await refreshHistory();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengirim permintaan revisi");
-    } finally {
-      setIsActing(false);
-    }
-  }
-
-  async function handlePublish() {
-    if (!id) return;
-    setIsActing(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await api.publishContent(id);
-      setContent(updated);
-      setNotice("Konten ditandai tayang.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal publish konten");
-    } finally {
-      setIsActing(false);
-    }
-  }
-
   if (isLoading) return <p className="text-muted">Memuat...</p>;
   if (!isNew && !content) return <p className="callout callout--error">{error || "Konten tidak ditemukan"}</p>;
 
   const isLeadAdmin = user?.role === "lead_admin";
   const isOwner = content ? content.createdBy === user?.userId : true;
+  // Lead/Admin yang buka draft BUKAN buatan sendiri: cuma bisa lihat isinya buat referensi,
+  // tidak bisa edit langsung (Judul/Platform/Pillar/Draft dikunci read-only).
+  const isReviewerMode = !isNew && !!content && isLeadAdmin && !isOwner;
 
   return (
     <div style={{ maxWidth: 1000 }}>
@@ -219,165 +120,144 @@ export function ContentEditPage() {
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
-        <h1 style={{ marginBottom: 0 }}>{isNew ? "Draft Konten Baru" : "Edit Draft"}</h1>
+        <h1 style={{ marginBottom: 0 }}>
+          {isNew ? "Draft Konten Baru" : isReviewerMode ? "Lihat Draft" : "Edit Draft"}
+        </h1>
         {content && <StatusStamp status={content.status} />}
       </div>
       <p className="text-muted" style={{ marginBottom: 20 }}>
         {isNew
-          ? "Langkah 1 — Ide & Draft"
-          : content?.requiresApproval
-          ? "Konten ini perlu approval Lead/Admin sebelum tayang."
-          : "Konten ini auto-publish (dibuat oleh Lead/Admin)."}
+          ? "Langkah 1 — Ide & Draft. Draft script tidak perlu approval, langsung bisa dipakai."
+          : isReviewerMode
+          ? `Draft dibuat oleh ${content?.author?.name || "creator"} — kamu bisa lihat isinya, tapi tidak bisa edit langsung.`
+          : "Draft script tidak perlu approval — yang perlu direview cuma media (gambar/video) di menu Media & Review."}
       </p>
 
       <div className="stack">
-        <div className="panel">
-          <label className="field">
+        {isReviewerMode ? (
+          <div className="panel">
             <span className="field__label">Judul</span>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="input"
-              placeholder={isNew ? "Misal: Promo Ramadhan 2026" : undefined}
-            />
-          </label>
+            <h2 style={{ marginTop: 4, marginBottom: 16 }}>{content!.title}</h2>
 
-          <div className="field">
-            <span className="field__label">Platform {isNew && "(opsional, bisa pilih lebih dari satu)"}</span>
-            <PlatformPicker value={platforms} onChange={setPlatforms} />
-          </div>
+            <span className="field__label">Platform</span>
+            <p style={{ marginTop: 4, marginBottom: 16 }}>
+              {content!.platforms && content!.platforms.length ? content!.platforms.join(", ") : <span className="text-muted">-</span>}
+            </p>
 
-          <div className="field">
-            <span className="field__label">Pillar {isNew && "(opsional)"}</span>
-            <PillarPicker value={pillar} onChange={setPillar} />
-          </div>
+            <span className="field__label">Pillar</span>
+            <p style={{ marginTop: 4, marginBottom: 16 }}>
+              {content!.pillar || <span className="text-muted">-</span>}
+            </p>
 
-          <div className="field" style={{ marginBottom: 0 }}>
             <span className="field__label">Draft</span>
-            <DraftVersionCards
-              key={id || "new"}
-              title={title}
-              platforms={platforms}
-              pillar={pillar}
-              value={bodyDraft}
-              onChange={setBodyDraft}
-            />
-          </div>
+            <div
+              className="panel panel--flat"
+              style={{ background: "var(--paper-alt)", whiteSpace: "pre-wrap", marginTop: 4, marginBottom: 0 }}
+            >
+              {content!.bodyDraft?.trim() ? content!.bodyDraft : <span className="text-muted">(draft masih kosong)</span>}
+            </div>
 
-          {error && (
-            <p className="callout callout--error" style={{ marginTop: 14 }}>
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className="callout callout--success" style={{ marginTop: 14 }}>
-              {notice}
-            </p>
-          )}
-
-          <div className="btn-row" style={{ marginTop: 16 }}>
-            <button onClick={handleSave} disabled={isSaving} className="btn btn--primary">
-              {isSaving ? "Menyimpan..." : isNew ? "Simpan Draft" : "Simpan Perubahan"}
-            </button>
-            {isNew ? (
-              <Link to="/content" className="btn">
-                Batal
-              </Link>
-            ) : (
-              <>
-                <Link to={`/content/${id}/storyboard`} className="btn">
-                  Storyboard
-                </Link>
-                <Link to={`/content/${id}/calendar`} className="btn">
-                  Kalender & To-Do
-                </Link>
-                <Link to={`/content/${id}/media`} className="btn">
-                  Media & Review
-                </Link>
-                <button onClick={handleDelete} disabled={isSaving} className="btn btn--danger">
-                  Hapus
-                </button>
-              </>
+            {error && (
+              <p className="callout callout--error" style={{ marginTop: 14 }}>
+                {error}
+              </p>
             )}
-          </div>
-        </div>
+            {notice && (
+              <p className="callout callout--success" style={{ marginTop: 14 }}>
+                {notice}
+              </p>
+            )}
 
-        {!isNew && id && <ContentTodoList contentId={id} />}
-
-        {content && (isOwner || isLeadAdmin) && (content.status === "draft" || content.status === "revisi") && (
-          <div className="panel">
-            <span className="eyebrow">Langkah berikutnya</span>
-            <button onClick={handleSubmitForReview} disabled={isActing} className="btn btn--blue">
-              {isActing ? "Mengirim..." : "Submit untuk Review"}
-            </button>
-          </div>
-        )}
-
-        {content && isLeadAdmin && content.status === "pending_review" && (
-          <div className="panel">
-            <span className="eyebrow">Aksi Review (Lead/Admin)</span>
-            <div className="btn-row" style={{ marginBottom: 12 }}>
-              <button onClick={handleApprove} disabled={isActing} className="btn btn--green">
-                ✓ Approve
+            <div className="btn-row" style={{ marginTop: 16 }}>
+              <Link to={`/content/${id}/storyboard`} className="btn">
+                Storyboard
+              </Link>
+              <Link to={`/content/${id}/calendar`} className="btn">
+                Kalender & To-Do
+              </Link>
+              <Link to={`/content/${id}/media`} className="btn">
+                Media & Review
+              </Link>
+              <button onClick={handleDelete} disabled={isSaving} className="btn btn--danger">
+                Hapus
               </button>
             </div>
-            <label className="field" style={{ marginBottom: 8 }}>
-              <span className="field__label">Catatan revisi (wajib diisi untuk minta revisi)</span>
-              <textarea value={revisionNotes} onChange={(e) => setRevisionNotes(e.target.value)} rows={2} className="textarea" />
-            </label>
-            <button onClick={handleRequestRevision} disabled={isActing} className="btn btn--danger">
-              Minta Revisi
-            </button>
           </div>
-        )}
-
-        {content && isLeadAdmin && content.status === "approved" && (
+        ) : (
           <div className="panel">
-            <span className="eyebrow">Siap tayang</span>
-            <button onClick={handlePublish} disabled={isActing} className="btn btn--primary">
-              {isActing ? "Memproses..." : "Tandai Tayang / Publish"}
-            </button>
-          </div>
-        )}
+            <label className="field">
+              <span className="field__label">Judul</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                placeholder={isNew ? "Misal: Promo Ramadhan 2026" : undefined}
+              />
+            </label>
 
-        {history.length > 0 && (
-          <div className="panel panel--flat" style={{ background: "var(--paper-alt)" }}>
-            <span className="eyebrow">Riwayat Approval</span>
-            <div className="stack stack--sm">
-              {history.map((h) => (
-                <div key={h.id} style={{ fontSize: 13 }}>
-                  <strong style={{ color: h.status === "approved" ? "var(--green)" : "var(--red)" }}>
-                    {h.status === "approved" ? "Disetujui" : "Perlu revisi"}
-                  </strong>{" "}
-                  oleh {h.reviewer?.name || "-"} ·{" "}
-                  <span className="text-muted" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
-                    {new Date(h.reviewedAt).toLocaleString("id-ID")}
-                  </span>
-                  {h.notes && <div className="text-muted">Catatan: {h.notes}</div>}
-                </div>
-              ))}
+            <div className="field">
+              <span className="field__label">Platform {isNew && "(opsional, bisa pilih lebih dari satu)"}</span>
+              <PlatformPicker value={platforms} onChange={setPlatforms} />
+            </div>
+
+            <div className="field">
+              <span className="field__label">Pillar {isNew && "(opsional)"}</span>
+              <PillarPicker value={pillar} onChange={setPillar} />
+            </div>
+
+            <div className="field" style={{ marginBottom: 0 }}>
+              <span className="field__label">Draft</span>
+              <DraftVersionCards
+                key={id || "new"}
+                title={title}
+                platforms={platforms}
+                pillar={pillar}
+                value={bodyDraft}
+                onChange={setBodyDraft}
+              />
+            </div>
+
+            {error && (
+              <p className="callout callout--error" style={{ marginTop: 14 }}>
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p className="callout callout--success" style={{ marginTop: 14 }}>
+                {notice}
+              </p>
+            )}
+
+            <div className="btn-row" style={{ marginTop: 16 }}>
+              <button onClick={handleSave} disabled={isSaving} className="btn btn--primary">
+                {isSaving ? "Menyimpan..." : isNew ? "Simpan Draft" : "Simpan Perubahan"}
+              </button>
+              {isNew ? (
+                <Link to="/content" className="btn">
+                  Batal
+                </Link>
+              ) : (
+                <>
+                  <Link to={`/content/${id}/storyboard`} className="btn">
+                    Storyboard
+                  </Link>
+                  <Link to={`/content/${id}/calendar`} className="btn">
+                    Kalender & To-Do
+                  </Link>
+                  <Link to={`/content/${id}/media`} className="btn">
+                    Media & Review
+                  </Link>
+                  <button onClick={handleDelete} disabled={isSaving} className="btn btn--danger">
+                    Hapus
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {content && isLeadAdmin && (
-          <div className="panel panel--dashed">
-            <span className="eyebrow">Override status manual (darurat/testing)</span>
-            <div className="btn-row">
-              {(Object.keys(STATUS_LABEL) as ContentStatus[]).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  disabled={isSaving || content.status === status}
-                  className="btn btn--sm"
-                >
-                  {STATUS_LABEL[status]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {!isNew && id && <ContentTodoList contentId={id} />}
       </div>
     </div>
   );
