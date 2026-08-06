@@ -572,25 +572,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  generateImageWithAi: (contentId: string, data: { prompt: string; referenceFile?: File }) => {
-    const fd = new FormData();
-    fd.append("prompt", data.prompt);
-    if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
-    return requestFormData<MediaAsset>(`/ai/content/${contentId}/generate-image`, fd);
-  },
-  /** Generate gambar standalone TANPA simpan dulu — buat preview & revisi sebelum disimpan ke Media. */
-  generateStandaloneImage: (data: { prompt: string; referenceFile?: File }) => {
-    const fd = new FormData();
-    fd.append("prompt", data.prompt);
-    if (data.referenceFile) fd.append("referenceFile", data.referenceFile);
-    return requestFormData<{ imageBase64: string; mimeType: string }>("/ai/image/generate", fd);
-  },
-  /** Simpan gambar hasil generate (yang sudah oke) sebagai media standalone. */
-  saveGeneratedImage: (data: { imageBase64: string; mimeType: string; fileName?: string }) =>
-    request<MediaAsset>("/ai/image/save", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
 
   // --- prompt templates (brand voice) ---
   listPromptTemplates: () => request<PromptTemplate[]>("/prompt-templates"),

@@ -9,7 +9,17 @@
       href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" type="image/x-icon" href="/src/assets/logo.png" />
+    <link rel="icon" type="image/x-icon" href="/public/icons/favicon-32.png" />
+
+    <!-- PWA: manifest di-inject otomatis oleh vite-plugin-pwa, ini tag tambahan khusus iOS
+         Safari yang tidak sepenuhnya membaca manifest.json buat "Add to Home Screen" -->
+    <meta name="theme-color" content="#14141a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Content Planner" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
     <title>Content Planner</title>
   </head>
   <body>

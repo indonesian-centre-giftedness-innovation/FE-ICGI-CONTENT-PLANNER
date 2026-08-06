@@ -5,7 +5,6 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ContentListPage } from "./pages/ContentListPage";
 import { ContentEditPage } from "./pages/ContentEditPage";
-import { ImageGeneratePage } from "./pages/ImageGeneratePage";
 import { StoryboardPage } from "./pages/StoryboardPage";
 import { CalendarTodoPage } from "./pages/CalendarTodoPage";
 import { ApprovalQueuePage } from "./pages/ApprovalQueuePage";
@@ -57,14 +56,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ContentEditPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/image-generate"
-            element={
-              <ProtectedRoute>
-                <ImageGeneratePage />
               </ProtectedRoute>
             }
           />

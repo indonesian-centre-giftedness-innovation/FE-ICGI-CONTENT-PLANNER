@@ -42,6 +42,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const prevUnreadRef = useRef<number | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   async function pollNotifications() {
     try {
@@ -65,6 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, []);
 
   async function handleLogout() {
+    setIsMobileNavOpen(false);
     try {
       await api.logout();
     } finally {
@@ -77,13 +79,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="page-shell">
-      <aside className="sidebar">
+      <div className="mobile-topbar">
+        <Link to="/dashboard" className="sidebar__brand" onClick={() => setIsMobileNavOpen(false)}>
+          <span className="sidebar__brand-mark">ICGI</span>
+          Content Planner
+        </Link>
+        <button
+          className="mobile-topbar__toggle"
+          onClick={() => setIsMobileNavOpen((v) => !v)}
+          aria-label="Buka menu"
+        >
+          {unreadCount > 0 && !isMobileNavOpen && <span className="badge-count mobile-topbar__badge">{unreadCount}</span>}
+          <span className={`hamburger${isMobileNavOpen ? " hamburger--open" : ""}`}>
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </div>
+
+      <aside className={`sidebar${isMobileNavOpen ? " sidebar--open" : ""}`}>
         <Link to="/dashboard" className="sidebar__brand">
           <span className="sidebar__brand-mark">ICGI</span>
           Content Planner
         </Link>
 
-        <nav className="sidebar__nav">
+        <nav className="sidebar__nav" onClick={() => setIsMobileNavOpen(false)}>
           {isLeadAdmin ? (
             <>
               <div className="sidebar__section">
@@ -104,7 +125,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <div className="sidebar__section">
                 <span className="sidebar__section-label">Redaksi</span>
                 <SidebarLink to="/review">Review</SidebarLink>
-                <SidebarLink to="/image-generate">Generate Gambar</SidebarLink>
                 <SidebarLink to="/prompt-templates">Prompt Templates</SidebarLink>
                 <SidebarLink to="/team">Anggota Tim</SidebarLink>
               </div>
@@ -129,7 +149,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <SidebarLink to="/todos">To-Do</SidebarLink>
                 <SidebarLink to="/storyboard">Storyboard</SidebarLink>
                 <SidebarLink to="/media">Media</SidebarLink>
-                <SidebarLink to="/image-generate">Generate Gambar</SidebarLink>
               </div>
 
               <div className="sidebar__section">
@@ -148,6 +167,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {isMobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setIsMobileNavOpen(false)} />}
 
       <main className="page-content">{children}</main>
     </div>
