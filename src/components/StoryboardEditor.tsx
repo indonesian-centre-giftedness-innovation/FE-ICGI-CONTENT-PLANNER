@@ -189,7 +189,7 @@ export function StoryboardEditor({
                     }}
                   >
                     {scene.sketchImageGdriveId ? (
-                      <img src={storyboardSketchUrl(scene.id)} alt="Sketsa scene" />
+                      <img src={storyboardSketchUrl(scene.id)} alt="Sketsa scene" crossOrigin="anonymous" />
                     ) : (
                       <span className="scene-sketch-box__placeholder">
                         Drag sketsa dari library, atau upload manual

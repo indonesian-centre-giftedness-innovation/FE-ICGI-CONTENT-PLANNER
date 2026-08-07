@@ -7,7 +7,14 @@ function MediaThumb({ item }: { item: MediaAssetSummary }) {
   const isVideo = item.mimeType?.startsWith("video/");
 
   if (item.latestVersion && isImage) {
-    return <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="media-grid__thumb" />;
+    return (
+      <img
+        src={mediaFileUrl(item.latestVersion.id)}
+        alt={item.fileName}
+        crossOrigin="anonymous"
+        className="media-grid__thumb"
+      />
+    );
   }
   if (item.latestVersion && isVideo) {
     return (
@@ -16,6 +23,7 @@ function MediaThumb({ item }: { item: MediaAssetSummary }) {
         muted
         playsInline
         preload="metadata"
+        crossOrigin="anonymous"
         className="media-grid__thumb"
       />
     );
@@ -43,7 +51,7 @@ function MediaLightbox({ item, onClose }: { item: MediaAssetSummary; onClose: ()
       </button>
       <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
         {item.latestVersion && isImage && (
-          <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="lightbox-media" />
+          <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} crossOrigin="anonymous" className="lightbox-media" />
         )}
         {item.latestVersion && isVideo && (
           <video
@@ -52,6 +60,7 @@ function MediaLightbox({ item, onClose }: { item: MediaAssetSummary; onClose: ()
             autoPlay
             playsInline
             preload="metadata"
+            crossOrigin="anonymous"
             className="lightbox-media"
           />
         )}

@@ -92,7 +92,7 @@ export function SketchTemplateGallery() {
             }}
             title="Drag ke kotak sketsa scene"
           >
-            <img src={sketchTemplateImageUrl(t.id)} alt={t.name} draggable={false} />
+            <img src={sketchTemplateImageUrl(t.id)} alt={t.name} draggable={false} crossOrigin="anonymous" />
             <span className="sketch-gallery__item-name">{t.name}</span>
             <button
               type="button"

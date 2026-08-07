@@ -309,6 +309,7 @@ function MediaVersionBlock({
             <img
               src={mediaFileUrl(version.id)}
               alt={`Versi ${version.versionNumber}`}
+              crossOrigin="anonymous"
               onClick={handleImageClick}
               style={{ maxWidth: "100%", display: "block", cursor: "crosshair" }}
             />
@@ -364,6 +365,7 @@ function MediaVersionBlock({
             controls
             playsInline
             preload="metadata"
+            crossOrigin="anonymous"
             style={{ maxWidth: "100%", display: "block", border: "3px solid var(--ink)", borderRadius: 4 }}
           />
         )}
