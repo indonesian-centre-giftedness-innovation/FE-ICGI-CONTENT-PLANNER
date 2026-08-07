@@ -1,9 +1,26 @@
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const TOKEN_KEY = "auth_token";
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     ...options,
   });
 
@@ -20,7 +37,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 async function requestFormData<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
-    credentials: "include",
+    headers: { ...authHeaders() },
     body: formData,
   });
 
@@ -44,7 +61,8 @@ function requestFormDataWithProgress<T>(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${BASE_URL}${path}`);
-    xhr.withCredentials = true;
+    const token = getToken();
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -78,7 +96,7 @@ function requestFormDataWithProgress<T>(
 
 /** Download file dari endpoint yang butuh auth cookie (export Excel/PDF, dll). */
 async function downloadFile(path: string, filenameFallback: string) {
-  const res = await fetch(`${BASE_URL}${path}`, { credentials: "include" });
+  const res = await fetch(`${BASE_URL}${path}`, { headers: { ...authHeaders() } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || `Gagal download (${res.status})`);
@@ -298,12 +316,21 @@ export type MediaPendingItem = {
 };
 
 export const api = {
-  login: (email: string, password: string) =>
-    request<{ id: string; name: string; role: string }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-  logout: () => request("/auth/logout", { method: "POST" }),
+  login: async (email: string, password: string) => {
+    const data = await request<{ id: string; name: string; role: string; token: string }>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify({ email, password }) }
+    );
+    setToken(data.token);
+    return data;
+  },
+  logout: async () => {
+    try {
+      await request("/auth/logout", { method: "POST" });
+    } finally {
+      clearToken();
+    }
+  },
   me: () => request<{ userId: string; role: string }>("/auth/me"),
 
   // --- content CRUD ---

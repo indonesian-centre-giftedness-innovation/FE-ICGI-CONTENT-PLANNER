@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { api } from "../lib/api";
+import { api, getToken } from "../lib/api";
 
 type AuthUser = { userId: string; role: "lead_admin" | "creator_staff" } | null;
 
@@ -17,6 +17,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   async function refresh() {
+    // Kalau tidak ada token tersimpan sama sekali, tidak perlu tembak /me —
+    // langsung anggap belum login, hemat satu request yang pasti gagal.
+    if (!getToken()) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const me = await api.me();
       setUser(me as AuthUser);
