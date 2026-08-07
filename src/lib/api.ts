@@ -115,16 +115,27 @@ async function downloadFile(path: string, filenameFallback: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+// Tag <img>/<video src="..."> tidak bisa mengirim header Authorization —
+// jadi untuk URL file yang dipakai langsung sebagai src, token disisipkan
+// lewat query param. Backend (authMiddleware) sudah menerima token dari
+// header ATAU dari query ?token= sebagai alternatif.
+function withTokenParam(url: string): string {
+  const token = getToken();
+  if (!token) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}token=${encodeURIComponent(token)}`;
+}
+
 export function mediaFileUrl(versionId: string): string {
-  return `${BASE_URL}/media/versions/${versionId}/file`;
+  return withTokenParam(`${BASE_URL}/media/versions/${versionId}/file`);
 }
 
 export function storyboardSketchUrl(sceneId: string): string {
-  return `${BASE_URL}/storyboard/scenes/${sceneId}/sketch`;
+  return withTokenParam(`${BASE_URL}/storyboard/scenes/${sceneId}/sketch`);
 }
 
 export function sketchTemplateImageUrl(templateId: string): string {
-  return `${BASE_URL}/storyboard/templates/${templateId}/image`;
+  return withTokenParam(`${BASE_URL}/storyboard/templates/${templateId}/image`);
 }
 
 export type ContentStatus =
