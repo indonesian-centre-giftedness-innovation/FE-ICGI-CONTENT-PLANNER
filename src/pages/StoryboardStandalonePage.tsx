@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api, type Storyboard } from "../lib/api";
 import { StoryboardEditor } from "../components/StoryboardEditor";
+import { useAuth } from "../context/AuthContext";
 
 export function StoryboardStandalonePage() {
   const { storyboardId } = useParams<{ storyboardId: string }>();
+  const { user } = useAuth();
 
   const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,12 +90,19 @@ export function StoryboardStandalonePage() {
 
       {error && <p className="callout callout--error">{error}</p>}
 
+      {user?.role === "lead_admin" && storyboard.createdBy && storyboard.createdBy !== user.userId && (
+        <p className="callout" style={{ marginBottom: 14 }}>
+          Storyboard ini bukan buatan kamu — cuma bisa lihat, tidak bisa edit langsung.
+        </p>
+      )}
+
       <StoryboardEditor
         storyboard={storyboard}
         onChanged={load}
         manualScriptVisible={showScript}
         manualScriptText={scriptText}
         onManualScriptChange={handleScriptChange}
+        readOnly={!!(user?.role === "lead_admin" && storyboard.createdBy && storyboard.createdBy !== user.userId)}
       />
     </div>
   );

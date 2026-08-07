@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api, type Storyboard, type Content } from "../lib/api";
 import { StoryboardEditor } from "../components/StoryboardEditor";
+import { useAuth } from "../context/AuthContext";
 
 export function StoryboardPage() {
   const { id: contentId } = useParams<{ id: string }>();
+  const { user } = useAuth();
 
   const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
   const [content, setContent] = useState<Content | null>(null);
@@ -92,10 +94,16 @@ export function StoryboardPage() {
 
       {storyboard && (
         <div style={{ marginTop: 20 }}>
+          {user?.role === "lead_admin" && content && content.createdBy !== user.userId && (
+            <p className="callout" style={{ marginBottom: 14 }}>
+              Storyboard ini dibuat oleh {content.author?.name || "creator"} — kamu cuma bisa lihat, tidak bisa edit langsung.
+            </p>
+          )}
           <StoryboardEditor
             storyboard={storyboard}
             onChanged={load}
             draftPreviewText={content?.bodyAiGenerated || content?.bodyDraft || null}
+            readOnly={!!(user?.role === "lead_admin" && content && content.createdBy !== user.userId)}
           />
         </div>
       )}

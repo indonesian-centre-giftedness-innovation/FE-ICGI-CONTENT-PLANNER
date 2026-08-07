@@ -11,6 +11,7 @@ export function StoryboardEditor({
   manualScriptVisible,
   manualScriptText,
   onManualScriptChange,
+  readOnly,
 }: {
   storyboard: Storyboard;
   onChanged: () => void;
@@ -20,6 +21,8 @@ export function StoryboardEditor({
   manualScriptVisible?: boolean;
   manualScriptText?: string;
   onManualScriptChange?: (value: string) => void;
+  /** Lead/Admin yang buka storyboard BUKAN buatan sendiri — cuma bisa lihat, semua kontrol edit disembunyikan. */
+  readOnly?: boolean;
 }) {
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
@@ -147,19 +150,23 @@ export function StoryboardEditor({
                   {String(idx + 1).padStart(2, "0")}
                 </span>
                 <div className="btn-row">
-                  <button onClick={() => handleMove(scene.id, "up")} disabled={idx === 0} className="btn btn--sm">
-                    ↑
-                  </button>
-                  <button
-                    onClick={() => handleMove(scene.id, "down")}
-                    disabled={idx === storyboard.scenes.length - 1}
-                    className="btn btn--sm"
-                  >
-                    ↓
-                  </button>
-                  <button onClick={() => handleDeleteScene(scene.id)} className="btn btn--sm btn--danger">
-                    Hapus
-                  </button>
+                  {!readOnly && (
+                    <>
+                      <button onClick={() => handleMove(scene.id, "up")} disabled={idx === 0} className="btn btn--sm">
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => handleMove(scene.id, "down")}
+                        disabled={idx === storyboard.scenes.length - 1}
+                        className="btn btn--sm"
+                      >
+                        ↓
+                      </button>
+                      <button onClick={() => handleDeleteScene(scene.id)} className="btn btn--sm btn--danger">
+                        Hapus
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -169,11 +176,13 @@ export function StoryboardEditor({
                   <div
                     className={`scene-sketch-box${dragOverSceneId === scene.id ? " scene-sketch-box--dragover" : ""}`}
                     onDragOver={(e) => {
+                      if (readOnly) return;
                       e.preventDefault();
                       setDragOverSceneId(scene.id);
                     }}
                     onDragLeave={() => setDragOverSceneId(null)}
                     onDrop={(e) => {
+                      if (readOnly) return;
                       e.preventDefault();
                       const templateId = e.dataTransfer.getData("text/plain");
                       if (templateId) handleDropTemplate(scene.id, templateId);
@@ -210,7 +219,8 @@ export function StoryboardEditor({
                     <textarea
                       defaultValue={scene.description ?? ""}
                       className="textarea scene-textarea"
-                      onBlur={(e) => handleUpdateScene(scene.id, "description", e.target.value)}
+                      readOnly={readOnly}
+                      onBlur={(e) => !readOnly && handleUpdateScene(scene.id, "description", e.target.value)}
                     />
                   </label>
 
@@ -219,7 +229,8 @@ export function StoryboardEditor({
                     <textarea
                       defaultValue={scene.dialogue ?? ""}
                       className="textarea scene-textarea"
-                      onBlur={(e) => handleUpdateScene(scene.id, "dialogue", e.target.value)}
+                      readOnly={readOnly}
+                      onBlur={(e) => !readOnly && handleUpdateScene(scene.id, "dialogue", e.target.value)}
                     />
                   </label>
 
@@ -230,28 +241,31 @@ export function StoryboardEditor({
                         type="number"
                         defaultValue={scene.durationSeconds}
                         className="input"
-                        onBlur={(e) => handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
+                        readOnly={readOnly}
+                        onBlur={(e) => !readOnly && handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
                       />
                     </label>
 
-                    <label className="btn btn--sm" style={{ cursor: "pointer" }}>
-                      {uploadingSketchId === scene.id
-                        ? "Mengunggah..."
-                        : scene.sketchImageGdriveId
-                        ? "Ganti Sketsa"
-                        : "Upload Sketsa Manual"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={uploadingSketchId === scene.id}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleUploadSketch(scene.id, file);
-                          e.target.value = "";
-                        }}
-                        style={{ display: "none" }}
-                      />
-                    </label>
+                    {!readOnly && (
+                      <label className="btn btn--sm" style={{ cursor: "pointer" }}>
+                        {uploadingSketchId === scene.id
+                          ? "Mengunggah..."
+                          : scene.sketchImageGdriveId
+                          ? "Ganti Sketsa"
+                          : "Upload Sketsa Manual"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={uploadingSketchId === scene.id}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadSketch(scene.id, file);
+                            e.target.value = "";
+                          }}
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                    )}
                   </div>
                   {uploadingSketchId === scene.id && uploadProgress !== null && (
                     <UploadProgressBar percent={uploadProgress} />
@@ -262,14 +276,16 @@ export function StoryboardEditor({
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={handleAddScene}
-          disabled={isAdding}
-          className="btn btn--primary btn--add-scene"
-        >
-          {isAdding ? "Menambah..." : "+ Tambah Scene"}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={handleAddScene}
+            disabled={isAdding}
+            className="btn btn--primary btn--add-scene"
+          >
+            {isAdding ? "Menambah..." : "+ Tambah Scene"}
+          </button>
+        )}
       </div>
 
       <div className="storyboard-layout__side">
@@ -302,7 +318,7 @@ export function StoryboardEditor({
             </div>
           )}
 
-          <SketchTemplateGallery />
+          {!readOnly && <SketchTemplateGallery />}
         </div>
       </div>
     </div>
