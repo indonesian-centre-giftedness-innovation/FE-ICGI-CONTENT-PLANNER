@@ -28,34 +28,14 @@ export default defineConfig({
       // Catatan: backend API-nya beda origin (domain/port lain), jadi otomatis TIDAK ikut
       // ter-cache oleh service worker ini — SW cuma nge-cache aset statis frontend sendiri
       // (JS/CSS/gambar hasil build) supaya app tetap bisa dibuka meski koneksi lagi lemah.
-      // Kecuali untuk endpoint file media/sketsa di bawah — ini sengaja dicache manual lewat
-      // runtimeCaching, karena Safari/WebKit TIDAK menyimpan cache untuk respons 206 (Range
-      // request video) lewat HTTP cache biasa. Dengan rangeRequests:true, Workbox nyimpennya
-      // di Cache Storage sendiri, jadi video yang sudah pernah dibuka tidak perlu diunduh
-      // ulang tiap kali dibuka lagi, termasuk di Safari.
       //
-      // PENTING: kalau URL backend (VITE_API_URL) berubah, ganti juga origin di bawah ini.
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }: { url: URL }) =>
-              url.origin === "https://icgi-content-planner-api.onrender.com" &&
-              (url.pathname.startsWith("/media/versions/") ||
-                url.pathname.startsWith("/storyboard/scenes/") ||
-                url.pathname.startsWith("/storyboard/templates/")),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "media-file-cache",
-              cacheableResponse: { statuses: [0, 200, 206] },
-              rangeRequests: true,
-              expiration: {
-                maxEntries: 80,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
-              },
-            },
-          },
-        ],
-      },
+      // Sempat dicoba runtimeCaching + rangeRequests untuk cache video lintas-origin di
+      // Safari, tapi DIBATALKAN: <video>/<img> ke domain lain tanpa atribut crossorigin
+      // dimuat browser sebagai respons "opaque" (buram, tidak bisa dibaca sama sekali oleh
+      // service worker) — RangeRequestsPlugin butuh baca ukuran/isi file buat motong
+      // per-bagian, jadi malah gagal total kalau responsnya opaque. Perlu pembenahan CORS
+      // di backend + atribut crossorigin di frontend dulu sebelum ini bisa diaktifkan lagi
+      // dengan aman.
       devOptions: {
         enabled: false,
       },
