@@ -738,19 +738,6 @@ select:focus-visible {
   .dashboard-widgets {
     grid-template-columns: 1fr;
   }
-  .storyboard-layout {
-    grid-template-columns: 1fr;
-  }
-  .storyboard-layout__side-sticky {
-    position: static;
-    max-height: none;
-  }
-  .draft-preview-panel__body {
-    max-height: 240px;
-  }
-  .sketch-gallery__grid {
-    max-height: 320px;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1076,6 +1063,27 @@ table.dtable {
   padding-bottom: 8px;
 }
 
+/* di layar ≤900px, kolom kanan (Draft Konten + Library Sketsa) pindah ke BAWAH
+   kartu scene, bukan lagi nempel sticky di samping — supaya tidak numpuk/tabrakan
+   sama kolom kiri di layar sempit. Taruh SETELAH aturan dasar di atas (bukan di
+   awal file) supaya urutan CSS-nya benar-benar menang saat breakpoint aktif. */
+@media (max-width: 900px) {
+  .storyboard-layout {
+    grid-template-columns: 1fr;
+  }
+  .storyboard-layout__side-sticky {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .draft-preview-panel__body {
+    max-height: 240px;
+  }
+  .sketch-gallery__grid {
+    max-height: 320px;
+  }
+}
+
 .sketch-gallery {
   /* posisi sticky ditangani wrapper .storyboard-layout__side-sticky.
      Ukuran kotak ini TETAP (tidak menyesuaikan jumlah template) — lihat
@@ -1342,16 +1350,20 @@ tr.row-clickable:hover {
   border-radius: 3px;
 }
 
-.media-grid__download {
+.media-grid__actions {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.media-grid__download,
+.media-grid__delete {
   width: 26px;
   height: 26px;
   border-radius: 50%;
   border: 2px solid var(--ink);
-  background: var(--yellow);
-  color: var(--ink);
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
@@ -1359,6 +1371,16 @@ tr.row-clickable:hover {
   align-items: center;
   justify-content: center;
   box-shadow: 2px 2px 0 var(--ink);
+}
+
+.media-grid__download {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.media-grid__delete {
+  background: var(--red);
+  color: var(--paper);
 }
 
 .media-grid__caption {
