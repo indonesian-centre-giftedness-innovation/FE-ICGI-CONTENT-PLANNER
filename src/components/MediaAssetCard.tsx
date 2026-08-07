@@ -362,6 +362,8 @@ function MediaVersionBlock({
             ref={videoRef}
             src={mediaFileUrl(version.id)}
             controls
+            playsInline
+            preload="metadata"
             style={{ maxWidth: "100%", display: "block", border: "3px solid var(--ink)", borderRadius: 4 }}
           />
         )}

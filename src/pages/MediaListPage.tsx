@@ -10,7 +10,15 @@ function MediaThumb({ item }: { item: MediaAssetSummary }) {
     return <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="media-grid__thumb" />;
   }
   if (item.latestVersion && isVideo) {
-    return <video src={mediaFileUrl(item.latestVersion.id)} muted className="media-grid__thumb" />;
+    return (
+      <video
+        src={mediaFileUrl(item.latestVersion.id)}
+        muted
+        playsInline
+        preload="metadata"
+        className="media-grid__thumb"
+      />
+    );
   }
   return <div className="media-grid__thumb media-grid__thumb--file">{item.fileName}</div>;
 }
@@ -38,7 +46,14 @@ function MediaLightbox({ item, onClose }: { item: MediaAssetSummary; onClose: ()
           <img src={mediaFileUrl(item.latestVersion.id)} alt={item.fileName} className="lightbox-media" />
         )}
         {item.latestVersion && isVideo && (
-          <video src={mediaFileUrl(item.latestVersion.id)} controls autoPlay className="lightbox-media" />
+          <video
+            src={mediaFileUrl(item.latestVersion.id)}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className="lightbox-media"
+          />
         )}
         <div className="lightbox-caption">{item.fileName}</div>
       </div>
