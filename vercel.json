@@ -11,7 +11,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://lovable.dev; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://contentplanner.icgi.or.id https://icgi-content-planner-api.onrender.com;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://lovable.dev https://icgi-content-planner-api.onrender.com; media-src 'self' https://icgi-content-planner-api.onrender.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://contentplanner.icgi.or.id https://icgi-content-planner-api.onrender.com;"
         }
       ]
     }
