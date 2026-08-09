@@ -1,8 +1,119 @@
-import { useState } from "react";
-import { api, storyboardSketchUrl, type Storyboard } from "../lib/api";
+import { useEffect, useState } from "react";
+import { api, storyboardSketchUrl, sketchTemplateImageUrl, type Storyboard, type SketchTemplate } from "../lib/api";
 import { SketchTemplateGallery } from "./SketchTemplateGallery";
 import { useConfirm } from "../context/ConfirmContext";
 import { UploadProgressBar } from "./UploadProgressBar";
+
+/** Panel yang bisa ditutup/dibuka — di layar lebar tampil sebagai card biasa,
+ * di HP jadi tombol mengambang yang membuka bottom-sheet saat diketuk. */
+function FloatingPanel({
+  icon,
+  title,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  icon: string;
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`floating-panel ${isOpen ? "floating-panel--open" : "floating-panel--closed"}`}
+      onClick={isOpen ? onToggle : undefined}
+    >
+      <div className="floating-panel__inner panel" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="floating-panel__toggle" onClick={onToggle}>
+          <span>
+            {icon} {title}
+          </span>
+          <span className="floating-panel__chevron">{isOpen ? "✕" : "▸"}</span>
+        </button>
+        {isOpen && <div className="floating-panel__body">{children}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Modal pilih sumber sketsa/footage untuk 1 scene — dari template tersedia, atau upload sendiri. */
+function TemplatePickerModal({
+  onClose,
+  onPickTemplate,
+  onUploadFile,
+  isUploading,
+  uploadProgress,
+}: {
+  onClose: () => void;
+  onPickTemplate: (templateId: string) => void;
+  onUploadFile: (file: File) => void;
+  isUploading: boolean;
+  uploadProgress: number | null;
+}) {
+  const [templates, setTemplates] = useState<SketchTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .listSketchTemplates()
+      .then(setTemplates)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  return (
+    <div className="confirm-backdrop" onClick={onClose}>
+      <div className="panel picker-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="btn-row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+          <span className="eyebrow" style={{ marginBottom: 0 }}>
+            Pilih Template / Footage
+          </span>
+          <button type="button" onClick={onClose} className="btn btn--sm">
+            ✕ Tutup
+          </button>
+        </div>
+
+        <span className="field__label">Dari template tersedia</span>
+        {isLoading && <p className="text-muted" style={{ fontSize: 12 }}>Memuat...</p>}
+        {!isLoading && templates.length === 0 && (
+          <p className="text-muted" style={{ fontSize: 12 }}>Belum ada template sketsa.</p>
+        )}
+        <div className="picker-modal__grid">
+          {templates.map((t) => (
+            <button
+              type="button"
+              key={t.id}
+              className="picker-modal__item"
+              onClick={() => onPickTemplate(t.id)}
+              title={t.name}
+            >
+              <img src={sketchTemplateImageUrl(t.id)} alt={t.name} crossOrigin="anonymous" />
+              <span>{t.name}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="picker-modal__divider">atau</div>
+
+        <span className="field__label">Upload dari perangkat</span>
+        <label className="btn btn--primary" style={{ width: "100%", cursor: "pointer", justifyContent: "center" }}>
+          {isUploading ? "Mengunggah..." : "📁 Pilih File dari HP/Komputer"}
+          <input
+            type="file"
+            accept="image/*"
+            disabled={isUploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUploadFile(file);
+            }}
+            style={{ display: "none" }}
+          />
+        </label>
+        {uploadProgress !== null && <UploadProgressBar percent={uploadProgress} />}
+      </div>
+    </div>
+  );
+}
 
 export function StoryboardEditor({
   storyboard,
@@ -31,6 +142,11 @@ export function StoryboardEditor({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [pickerSceneId, setPickerSceneId] = useState<string | null>(null);
+
+  const [isDraftOpen, setIsDraftOpen] = useState(true);
+  const [isScriptOpen, setIsScriptOpen] = useState(true);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(true);
 
   async function handleUploadSketch(sceneId: string, file: File) {
     setUploadingSketchId(sceneId);
@@ -39,6 +155,7 @@ export function StoryboardEditor({
     try {
       await api.uploadSceneSketch(sceneId, file, setUploadProgress);
       onChanged();
+      setPickerSceneId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal upload sketsa");
     } finally {
@@ -53,6 +170,7 @@ export function StoryboardEditor({
     try {
       await api.applySketchTemplateToScene(sceneId, templateId);
       onChanged();
+      setPickerSceneId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menerapkan template sketsa");
     }
@@ -114,6 +232,7 @@ export function StoryboardEditor({
   }
 
   const totalDuration = storyboard.scenes.reduce((sum, s) => sum + s.durationSeconds, 0);
+  const hasDraftPanel = draftPreviewText !== undefined && draftPreviewText !== null && draftPreviewText.trim() !== "";
 
   return (
     <div className="storyboard-layout">
@@ -171,7 +290,7 @@ export function StoryboardEditor({
               </div>
 
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                {/* kotak sketsa — ukuran konsisten & jadi target drag-drop dari library */}
+                {/* kotak sketsa — ukuran konsisten & tetap jadi target drag-drop dari library (desktop) */}
                 <div style={{ flexShrink: 0 }}>
                   <div
                     className={`scene-sketch-box${dragOverSceneId === scene.id ? " scene-sketch-box--dragover" : ""}`}
@@ -192,7 +311,7 @@ export function StoryboardEditor({
                       <img src={storyboardSketchUrl(scene.id)} alt="Sketsa scene" crossOrigin="anonymous" />
                     ) : (
                       <span className="scene-sketch-box__placeholder">
-                        Drag sketsa dari library, atau upload manual
+                        {readOnly ? "Belum ada sketsa" : "Drag sketsa dari library, atau pakai tombol di bawah"}
                       </span>
                     )}
                   </div>
@@ -209,6 +328,26 @@ export function StoryboardEditor({
                       }}
                     >
                       {scene.sketchLabel}
+                    </div>
+                  )}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setPickerSceneId(scene.id)}
+                      disabled={uploadingSketchId === scene.id}
+                      className="btn btn--sm"
+                      style={{ width: 220, marginTop: 6 }}
+                    >
+                      {uploadingSketchId === scene.id
+                        ? "Mengunggah..."
+                        : scene.sketchImageGdriveId
+                        ? "🖼️ Ganti Template/Footage"
+                        : "🖼️ Masukkan Template/Footage"}
+                    </button>
+                  )}
+                  {uploadingSketchId === scene.id && uploadProgress !== null && (
+                    <div style={{ width: 220 }}>
+                      <UploadProgressBar percent={uploadProgress} />
                     </div>
                   )}
                 </div>
@@ -234,42 +373,16 @@ export function StoryboardEditor({
                     />
                   </label>
 
-                  <div className="btn-row" style={{ alignItems: "flex-end" }}>
-                    <label className="field" style={{ marginBottom: 0, maxWidth: 140 }}>
-                      <span className="field__label">Durasi (detik)</span>
-                      <input
-                        type="number"
-                        defaultValue={scene.durationSeconds}
-                        className="input"
-                        readOnly={readOnly}
-                        onBlur={(e) => !readOnly && handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
-                      />
-                    </label>
-
-                    {!readOnly && (
-                      <label className="btn btn--sm" style={{ cursor: "pointer" }}>
-                        {uploadingSketchId === scene.id
-                          ? "Mengunggah..."
-                          : scene.sketchImageGdriveId
-                          ? "Ganti Sketsa"
-                          : "Upload Sketsa Manual"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={uploadingSketchId === scene.id}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadSketch(scene.id, file);
-                            e.target.value = "";
-                          }}
-                          style={{ display: "none" }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                  {uploadingSketchId === scene.id && uploadProgress !== null && (
-                    <UploadProgressBar percent={uploadProgress} />
-                  )}
+                  <label className="field" style={{ marginBottom: 0, maxWidth: 140 }}>
+                    <span className="field__label">Durasi (detik)</span>
+                    <input
+                      type="number"
+                      defaultValue={scene.durationSeconds}
+                      className="input"
+                      readOnly={readOnly}
+                      onBlur={(e) => !readOnly && handleUpdateScene(scene.id, "durationSeconds", e.target.value)}
+                    />
+                  </label>
                 </div>
               </div>
             </div>
@@ -289,10 +402,9 @@ export function StoryboardEditor({
       </div>
 
       <div className="storyboard-layout__side">
-        <div className="storyboard-layout__side-sticky">
-          {draftPreviewText !== undefined && draftPreviewText !== null && draftPreviewText.trim() !== "" && (
-            <div className="panel draft-preview-panel">
-              <span className="eyebrow">Draft Konten (AI/Manual)</span>
+        <div className="floating-panel-group">
+          {hasDraftPanel && (
+            <FloatingPanel icon="📄" title="Draft Konten" isOpen={isDraftOpen} onToggle={() => setIsDraftOpen((v) => !v)}>
               <p className="text-muted" style={{ fontSize: 12, marginTop: 0 }}>
                 Salin bagian yang relevan ke kolom Dialog di scene.
               </p>
@@ -300,12 +412,11 @@ export function StoryboardEditor({
               <button type="button" onClick={handleCopyDraft} className="btn btn--sm" style={{ width: "100%" }}>
                 {copyStatus || "📋 Salin Semua Teks"}
               </button>
-            </div>
+            </FloatingPanel>
           )}
 
           {manualScriptVisible && (
-            <div className="panel draft-preview-panel">
-              <span className="eyebrow">Script</span>
+            <FloatingPanel icon="📝" title="Script" isOpen={isScriptOpen} onToggle={() => setIsScriptOpen((v) => !v)}>
               <p className="text-muted" style={{ fontSize: 12, marginTop: 0 }}>
                 Tempel naskah/script kamu di sini sebagai referensi saat mengisi Deskripsi &amp; Dialog tiap scene.
               </p>
@@ -315,12 +426,24 @@ export function StoryboardEditor({
                 className="textarea draft-manual-textarea"
                 placeholder="Tempel naskah/script di sini..."
               />
-            </div>
+            </FloatingPanel>
           )}
 
-          {!readOnly && <SketchTemplateGallery />}
+          <FloatingPanel icon="🖼️" title="Library Sketsa" isOpen={isLibraryOpen} onToggle={() => setIsLibraryOpen((v) => !v)}>
+            <SketchTemplateGallery />
+          </FloatingPanel>
         </div>
       </div>
+
+      {pickerSceneId && (
+        <TemplatePickerModal
+          onClose={() => setPickerSceneId(null)}
+          onPickTemplate={(templateId) => handleDropTemplate(pickerSceneId, templateId)}
+          onUploadFile={(file) => handleUploadSketch(pickerSceneId, file)}
+          isUploading={uploadingSketchId === pickerSceneId}
+          uploadProgress={uploadProgress}
+        />
+      )}
     </div>
   );
 }

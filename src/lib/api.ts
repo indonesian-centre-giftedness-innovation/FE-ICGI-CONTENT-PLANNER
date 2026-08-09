@@ -269,7 +269,7 @@ export type MediaVersion = {
   mediaAssetId: string;
   versionNumber: number;
   gdriveFileId: string;
-  status: "pending" | "approved";
+  status: "pending" | "approved" | "published";
   uploadedBy: string | null;
   createdAt: string;
   deletedAt: string | null;
@@ -542,6 +542,15 @@ export const api = {
     request<{ message: string }>(`/media/${assetId}`, { method: "DELETE" }),
   approveMediaVersion: (versionId: string) =>
     request<MediaVersion>(`/media/versions/${versionId}/approve`, { method: "POST" }),
+  /** Creator/Staff tandai media approved sebagai published (setelah beneran diposting). */
+  publishMediaVersion: (versionId: string) =>
+    request<MediaVersion>(`/media/versions/${versionId}/publish`, { method: "POST" }),
+  /** Lead/Admin minta revisi — otomatis masuk sebagai komentar + notifikasi ke pengunggah. */
+  requestMediaRevision: (versionId: string, notes: string) =>
+    request<MediaComment>(`/media/versions/${versionId}/request-revision`, {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+    }),
   downloadMediaVersion: (versionId: string, filename: string) =>
     downloadFile(`/media/versions/${versionId}/file`, filename),
   listMediaComments: (versionId: string) =>

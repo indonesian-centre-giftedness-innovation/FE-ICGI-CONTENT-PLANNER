@@ -1049,33 +1049,103 @@ table.dtable {
   min-width: 0;
 }
 
-.storyboard-layout__side-sticky {
+/* ============================================================
+   FLOATING PANEL — Draft Konten / Script / Library Sketsa.
+   Desktop: card biasa yang bisa dilipat (collapse) di kolom kanan.
+   HP (≤900px): jadi tombol mengambang (FAB) di pojok kanan-bawah,
+   ketuk untuk buka sebagai bottom-sheet menutupi layar.
+   ============================================================ */
+
+.floating-panel-group {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   position: sticky;
   top: 20px;
   max-height: calc(100vh - 40px);
-  /* jaring pengaman: kalau total tinggi Draft Konten + Library Sketsa
-     ternyata lebih tinggi dari layar, wrapper ini sendiri yang scroll —
-     supaya tidak ada bagian yang "kepotong" tanpa cara untuk melihatnya */
   overflow-y: auto;
   padding-bottom: 8px;
 }
 
-/* di layar ≤900px, kolom kanan (Draft Konten + Library Sketsa) pindah ke BAWAH
-   kartu scene, bukan lagi nempel sticky di samping — supaya tidak numpuk/tabrakan
-   sama kolom kiri di layar sempit. Taruh SETELAH aturan dasar di atas (bukan di
-   awal file) supaya urutan CSS-nya benar-benar menang saat breakpoint aktif. */
+.floating-panel__inner {
+  width: 100%;
+}
+
+.floating-panel__toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.floating-panel__chevron {
+  font-family: var(--font-mono);
+  color: #8a8a8f;
+}
+
+.floating-panel__body {
+  margin-top: 10px;
+}
+
 @media (max-width: 900px) {
   .storyboard-layout {
     grid-template-columns: 1fr;
   }
-  .storyboard-layout__side-sticky {
-    position: static;
+
+  .floating-panel-group {
+    position: fixed;
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    left: auto;
     max-height: none;
-    overflow-y: visible;
+    overflow: visible;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    z-index: 90;
+    gap: 10px;
+    padding-bottom: 0;
   }
+
+  .floating-panel--closed .floating-panel__inner {
+    width: auto;
+  }
+
+  .floating-panel--closed .floating-panel__toggle {
+    background: var(--yellow);
+    border: var(--border-w) solid var(--ink);
+    border-radius: 999px;
+    padding: 12px 18px;
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+  }
+
+  .floating-panel--open {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 26, 0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 95;
+  }
+
+  .floating-panel--open .floating-panel__inner {
+    max-height: 82vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: var(--shadow-lg);
+    animation: confirm-pop-in 0.15s ease;
+  }
+
   .draft-preview-panel__body {
     max-height: 240px;
   }
@@ -1085,8 +1155,7 @@ table.dtable {
 }
 
 .sketch-gallery {
-  /* posisi sticky ditangani wrapper .storyboard-layout__side-sticky.
-     Ukuran kotak ini TETAP (tidak menyesuaikan jumlah template) — lihat
+  /* Ukuran kotak ini TETAP (tidak menyesuaikan jumlah template) — lihat
      max-height di .sketch-gallery__grid, isinya sendiri yang scroll. */
 }
 
@@ -1229,6 +1298,76 @@ tr.row-clickable:hover {
 
 .draft-preview-panel {
   margin-bottom: 20px;
+}
+
+.picker-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: confirm-pop-in 0.15s ease;
+}
+
+.picker-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 8px 0 16px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.picker-modal__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper-alt);
+  padding: 6px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.picker-modal__item:hover {
+  border-color: var(--blue);
+  background: #eef1ff;
+}
+
+.picker-modal__item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.picker-modal__divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8a8a8f;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  margin: 4px 0 12px;
+}
+
+.picker-modal__divider::before,
+.picker-modal__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #d8d5c8;
+}
+
+@media (max-width: 480px) {
+  .picker-modal__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .draft-preview-panel__body {

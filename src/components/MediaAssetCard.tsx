@@ -7,6 +7,7 @@ import {
   type MediaComment,
 } from "../lib/api";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
 import { UploadProgressBar } from "./UploadProgressBar";
 
 export function MediaAssetCard({
@@ -18,6 +19,7 @@ export function MediaAssetCard({
   isLeadAdmin: boolean;
   onChanged: () => void;
 }) {
+  const { user } = useAuth();
   const confirmDialog = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [isUploadingVersion, setIsUploadingVersion] = useState(false);
@@ -25,6 +27,7 @@ export function MediaAssetCard({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const sortedVersions = [...asset.versions].sort((a, b) => b.versionNumber - a.versionNumber);
+  const isOwner = asset.uploadedBy === user?.userId;
 
   async function handleUploadVersion(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -95,7 +98,15 @@ export function MediaAssetCard({
 
       <div className="stack" style={{ marginTop: 12 }}>
         {sortedVersions.map((v) => (
-          <MediaVersionBlock key={v.id} version={v} mimeType={asset.mimeType} fileName={asset.fileName} isLeadAdmin={isLeadAdmin} onChanged={onChanged} />
+          <MediaVersionBlock
+            key={v.id}
+            version={v}
+            mimeType={asset.mimeType}
+            fileName={asset.fileName}
+            isLeadAdmin={isLeadAdmin}
+            isOwner={isOwner}
+            onChanged={onChanged}
+          />
         ))}
       </div>
     </div>
@@ -107,20 +118,28 @@ function MediaVersionBlock({
   mimeType,
   fileName,
   isLeadAdmin,
+  isOwner,
   onChanged,
 }: {
   version: MediaVersion;
   mimeType: string | null;
   fileName: string;
   isLeadAdmin: boolean;
+  isOwner: boolean;
   onChanged: () => void;
 }) {
+  const { user } = useAuth();
+  const isStaff = user?.role === "creator_staff";
   const confirmDialog = useConfirm();
   const [comments, setComments] = useState<MediaComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showRevisionBox, setShowRevisionBox] = useState(false);
+  const [revisionNotes, setRevisionNotes] = useState("");
+  const [isSendingRevision, setIsSendingRevision] = useState(false);
 
   const [pendingPin, setPendingPin] = useState<{ x: number; y: number } | null>(null);
   const [pinCommentText, setPinCommentText] = useState("");
@@ -262,6 +281,35 @@ function MediaVersionBlock({
     }
   }
 
+  async function handlePublish() {
+    setIsPublishing(true);
+    setError(null);
+    try {
+      await api.publishMediaVersion(version.id);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menandai published");
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
+  async function handleRequestRevision() {
+    if (!revisionNotes.trim()) return;
+    setIsSendingRevision(true);
+    setError(null);
+    try {
+      await api.requestMediaRevision(version.id, revisionNotes.trim());
+      setRevisionNotes("");
+      setShowRevisionBox(false);
+      await loadComments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengirim permintaan revisi");
+    } finally {
+      setIsSendingRevision(false);
+    }
+  }
+
   async function handleDownload() {
     setIsDownloading(true);
     setError(null);
@@ -285,8 +333,8 @@ function MediaVersionBlock({
           <span className="text-muted" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
             VERSI {version.versionNumber}
           </span>
-          <span className={`stamp ${version.status === "approved" ? "stamp--approved" : "stamp--pending_review"}`} style={{ fontSize: 11 }}>
-            {version.status === "approved" ? "Disetujui" : "Menunggu Review"}
+          <span className={`stamp ${version.status === "published" ? "stamp--approved" : version.status === "approved" ? "stamp--approved" : "stamp--pending_review"}`} style={{ fontSize: 11 }}>
+            {version.status === "published" ? "Published" : version.status === "approved" ? "Disetujui" : "Menunggu Review"}
           </span>
         </span>
         <div className="btn-row">
@@ -294,12 +342,43 @@ function MediaVersionBlock({
             {isDownloading ? "Mengunduh..." : "⬇ Unduh"}
           </button>
           {isLeadAdmin && version.status === "pending" && (
-            <button onClick={handleApprove} disabled={isApproving} className="btn btn--sm btn--green">
-              {isApproving ? "Memproses..." : "✓ Approve versi ini"}
+            <>
+              <button onClick={handleApprove} disabled={isApproving} className="btn btn--sm btn--green">
+                {isApproving ? "Memproses..." : "✓ Approve versi ini"}
+              </button>
+              <button onClick={() => setShowRevisionBox((v) => !v)} className="btn btn--sm btn--danger">
+                🔁 Minta Revisi
+              </button>
+            </>
+          )}
+          {isStaff && isOwner && version.status === "approved" && (
+            <button onClick={handlePublish} disabled={isPublishing} className="btn btn--sm btn--blue">
+              {isPublishing ? "Memproses..." : "🚀 Tandai Published"}
             </button>
           )}
         </div>
       </div>
+
+      {showRevisionBox && (
+        <div className="panel panel--flat" style={{ marginTop: 10, background: "var(--paper)" }}>
+          <span className="field__label">Catatan revisi untuk pengunggah</span>
+          <textarea
+            value={revisionNotes}
+            onChange={(e) => setRevisionNotes(e.target.value)}
+            rows={2}
+            className="textarea"
+            placeholder="Misal: warnanya kurang cerah, tulisan CTA kepotong..."
+            style={{ marginBottom: 8 }}
+          />
+          <button
+            onClick={handleRequestRevision}
+            disabled={isSendingRevision || !revisionNotes.trim()}
+            className="btn btn--sm btn--danger"
+          >
+            {isSendingRevision ? "Mengirim..." : "Kirim Permintaan Revisi"}
+          </button>
+        </div>
+      )}
 
       {error && <p className="callout callout--error" style={{ marginTop: 10 }}>{error}</p>}
 

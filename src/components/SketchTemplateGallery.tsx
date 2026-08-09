@@ -67,10 +67,9 @@ export function SketchTemplateGallery() {
   }
 
   return (
-    <div className="panel sketch-gallery">
-      <span className="eyebrow">Library Sketsa</span>
+    <div className="sketch-gallery">
       <p className="text-muted" style={{ fontSize: 12, marginTop: 0, marginBottom: 10 }}>
-        Drag salah satu ke kotak sketsa di scene untuk pakai.
+        Drag salah satu ke kotak sketsa di scene, atau pakai tombol "Masukkan Template/Footage" di tiap scene.
       </p>
 
       {error && <p className="callout callout--error" style={{ fontSize: 12 }}>{error}</p>}
