@@ -42,11 +42,17 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
+            // PENTING: cocokkan path SPESIFIK sampai ke suffix endpoint file-nya
+            // (bukan cuma prefix), supaya endpoint GET lain yang datanya berubah-ubah
+            // di bawah prefix yang sama (mis. /media/versions/:id/comments,
+            // /storyboard/templates/all) TIDAK ikut ke-cache CacheFirst 30 hari.
+            // Kalau prefix-nya dilebarkan lagi nanti, sebisa mungkin tetap anchor ke
+            // suffix file-nya, jangan balik ke startsWith() prefix longgar.
             urlPattern: ({ url }: { url: URL }) =>
               url.origin === "https://icgi-content-planner-api.onrender.com" &&
-              (url.pathname.startsWith("/media/versions/") ||
-                url.pathname.startsWith("/storyboard/scenes/") ||
-                url.pathname.startsWith("/storyboard/templates/")),
+              (/^\/media\/versions\/[^/]+\/file$/.test(url.pathname) ||
+                /^\/storyboard\/scenes\/[^/]+\/sketch$/.test(url.pathname) ||
+                /^\/storyboard\/templates\/[^/]+\/image$/.test(url.pathname)),
             handler: "CacheFirst",
             options: {
               cacheName: "media-file-cache",
