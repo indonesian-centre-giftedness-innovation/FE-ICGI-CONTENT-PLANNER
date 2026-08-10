@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["icons/favicon-32.png", "icons/apple-touch-icon.png"],
+      includeAssets: ["icons/favicon-32.png", "icons/apple-touch-icon.png", "SOGI.mp3"],
       manifest: {
         name: "ICGI Content Planner",
         short_name: "Content Planner",

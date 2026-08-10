@@ -16,24 +16,16 @@ function SidebarLink({ to, children }: { to: string; children: ReactNode }) {
   );
 }
 
-// beep notifikasi disintesis langsung (tanpa file audio eksternal)
+// suara notifikasi — file audio custom di public/SOGI.mp3
+const notifyAudio = new Audio("/SOGI.mp3");
+notifyAudio.volume = 0.6;
+
 function playNotifySound() {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.35);
+    notifyAudio.currentTime = 0;
+    void notifyAudio.play();
   } catch {
-    // browser tidak support Web Audio / autoplay diblokir sebelum ada interaksi user — abaikan
+    // autoplay diblokir sebelum ada interaksi user, atau file belum tersedia — abaikan
   }
 }
 
